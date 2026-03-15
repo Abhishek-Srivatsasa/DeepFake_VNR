@@ -1,0 +1,8 @@
+flask
+opencv-python
+numpy
+torch
+torchvision
+pillow
+pymongo
+ImageHash
