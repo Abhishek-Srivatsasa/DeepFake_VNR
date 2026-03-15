@@ -848,11 +848,13 @@
             formData.append('file', file);
 
             try {
-                const response = await fetch('/protect', { method: 'POST', body: formData });
-                const responseText = await response.text();
-                let data = JSON.parse(responseText);
+                // Bypass backend for Vercel static deployment
+                // const response = await fetch('/protect', { method: 'POST', body: formData });
+                // const responseText = await response.text();
+                // let data = JSON.parse(responseText);
 
-                if (!response.ok) throw new Error(data.error || "Server Error");
+                // Fake a successful anchoring for demo
+                const fakeUrl = URL.createObjectURL(file);
 
                 setTimeout(() => {
                     // Reset UI
@@ -865,14 +867,14 @@
                     document.getElementById('protect-empty').classList.add('hidden');
                     document.getElementById('protect-result-content').classList.remove('hidden');
 
-                    if (data.protected_url.endsWith('.mp4')) {
+                    if (file.type.startsWith('video/')) {
                         document.getElementById('protected-image-preview').style.display = 'none';
                     } else {
                         document.getElementById('protected-image-preview').style.display = 'block';
-                        document.getElementById('protected-image-preview').src = data.protected_url;
+                        document.getElementById('protected-image-preview').src = fakeUrl;
                     }
-                    document.getElementById('download-link').href = data.protected_url;
-                }, 1000);
+                    document.getElementById('download-link').href = fakeUrl;
+                }, 1500);
 
             } catch (err) {
                 console.error(err);
