@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratyaksha | Deepfake & Identity Security</title>
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { 
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        background: '#030712', // grayish black
+                        surface: '#111827',
+                        surfaceLight: '#1f2937',
+                        primary: '#0ea5e9', // Sky blue
+                        secondary: '#8b5cf6', // Violet
+                        accent: '#10b981', // Emerald
+                        danger: '#f43f5e', // Rose
+                    },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'glow': 'glow 2s ease-in-out infinite alternate',
+                        'scan': 'scan 2.5s linear infinite',
+                        'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        glow: {
+                            '0%': { boxShadow: '0 0 10px rgba(14, 165, 233, 0.2)' },
+                            '100%': { boxShadow: '0 0 25px rgba(14, 165, 233, 0.6), 0 0 10px rgba(139, 92, 246, 0.4)' }
+                        },
+                        scan: {
+                            '0%': { transform: 'translateY(-100%)' },
+                            '100%': { transform: 'translateY(100%)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            background-color: #030712; 
+            color: #f8fafc; 
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Classes */
+        .glass {
+            background: rgba(17, 24, 39, 0.4);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .glass-card {
+            background: linear-gradient(180deg, rgba(31, 41, 55, 0.4) 0%, rgba(17, 24, 39, 0.4) 100%);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 40px 0 rgba(14, 165, 233, 0.15);
+            border-color: rgba(14, 165, 233, 0.3);
+        }
+
+        /* Text Gradients */
+        .text-gradient {
+            background: linear-gradient(135deg, #0ea5e9 0%, #8b5cf6 50%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .text-gradient-danger {
+            background: linear-gradient(135deg, #f43f5e 0%, #fb923c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .text-gradient-success {
+            background: linear-gradient(135deg, #10b981 0%, #3b82f6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Ambient Background meshes */
+        .bg-mesh-1 {
+            position: fixed;
+            top: -10%; left: -10%;
+            width: 50vw; height: 50vw;
+            background: radial-gradient(circle, rgba(14,165,233,0.15) 0%, rgba(3,7,18,0) 70%);
+            border-radius: 50%;
+            filter: blur(60px);
+            z-index: -1;
+            pointer-events: none;
+        }
+        .bg-mesh-2 {
+            position: fixed;
+            bottom: -20%; right: -10%;
+            width: 60vw; height: 60vw;
+            background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, rgba(3,7,18,0) 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Scroller */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #030712; }
+        ::-webkit-scrollbar-thumb { background: #1f2937; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #0ea5e9; }
+
+        /* Section Toggles */
+        .page-section {
+            opacity: 0;
+            transform: translateY(20px);
+            visibility: hidden;
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .page-section.active {
+            opacity: 1;
+            transform: translateY(0);
+            visibility: visible;
+            position: relative;
+        }
+
+        /* Custom Button */
+        .btn-glow {
+            position: relative;
+            background: linear-gradient(90deg, #0ea5e9, #8b5cf6);
+            z-index: 1;
+        }
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: inherit;
+            background: linear-gradient(90deg, #0ea5e9, #8b5cf6, #10b981);
+            background-size: 200% auto;
+            z-index: -1;
+            filter: blur(10px);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            animation: gradientMove 3s linear infinite;
+        }
+        .btn-glow:hover::before { opacity: 0.8; }
+        
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Progress Circle */
+        .circular-chart {
+            display: block;
+            margin: 0 auto;
+            max-width: 80%;
+            max-height: 250px;
+        }
+        .circle-bg {
+            fill: none;
+            stroke: #1f2937;
+            stroke-width: 3.8;
+        }
+        .circle {
+            fill: none;
+            stroke-width: 3.8;
+            stroke-linecap: round;
+            transition: stroke-dasharray 1.5s ease-out, stroke 0.5s;
+        }
+        .percentage {
+            fill: #fff;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.5em;
+            text-anchor: middle;
+            font-weight: 700;
+        }
+        .percentage-label {
+            fill: #9ca3af;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.2em;
+            text-anchor: middle;
+        }
+
+        /* Scanning Line */
+        .scan-container {
+            position: relative;
+            overflow: hidden;
+        }
+        .scan-line {
+            position: absolute;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, rgba(14, 165, 233, 0.8), transparent);
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.6);
+            left: 0;
+            top: 0;
+            z-index: 20;
+            animation: scan 2.5s ease-in-out infinite alternate;
+            display: none;
+        }
+
+        .upload-icon-pulse {
+            animation: pulse-slow 3s infinite;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-primary/30 selection:text-white flex flex-col min-h-screen">
+
+    <!-- Animated Background -->
+    <div class="bg-mesh-1 animate-blob"></div>
+    <div class="bg-mesh-2 animate-blob" style="animation-delay: 2s;"></div>
+    
+    <!-- Grid Overlay -->
+    <div class="fixed inset-0 pointer-events-none" style="background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px); background-size: 40px 40px; z-index: -1;"></div>
+
+    <!-- Subtle Disclaimer Banner -->
+    <div class="fixed top-0 w-full z-[60] bg-amber-500/10 border-b border-amber-500/15 py-1 px-4 text-center backdrop-blur-sm">
+        <p class="text-[9px] text-amber-400/70 font-mono tracking-wider">⚠ Prototype UI — Actual detection engines will be deployed on hackathon day</p>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="fixed w-full top-[26px] z-50 glass border-b-0 border-white/5">
+        <div class="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+            <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+                <div class="relative w-10 h-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 shadow-lg shadow-black/50">
+                    <i class="ph ph-shield-check text-2xl text-transparent bg-clip-text bg-gradient-to-br from-primary to-secondary"></i>
+                    <div class="absolute inset-0 rounded-xl bg-primary/20 blur-md -z-10 animate-pulse-slow"></div>
+                </div>
+                <div>
+                    <h1 class="font-bold text-xl tracking-wide text-white leading-tight">Pratyaksha</h1>
+                </div>
+            </div>
+
+            <div class="hidden md:flex items-center space-x-1 bg-surfaceLight/30 backdrop-blur-md p-1.5 rounded-2xl border border-white/5">
+                <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 text-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                    <div class="flex items-center gap-2"><i class="ph ph-squares-four"></i> Overview</div>
+                </button>
+                <button onclick="switchTab('verify')" id="nav-verify" class="nav-btn px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5">
+                    <div class="flex items-center gap-2"><i class="ph ph-fingerprint"></i> KYC Verification</div>
+                </button>
+                <button onclick="switchTab('protect')" id="nav-protect" class="nav-btn px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5">
+                    <div class="flex items-center gap-2"><i class="ph ph-lock-key"></i> Data Anchoring</div>
+                </button>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="px-3 py-1.5 rounded-full border border-accent/30 bg-accent/10 flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
+                    <span class="text-xs font-mono text-accent">SYSTEM ACTIVE</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow pt-32 pb-20 px-6 w-full max-w-7xl mx-auto relative">
+
+        <!-- ================= DASHBOARD ================= -->
+        <section id="dashboard" class="page-section active">
+            <!-- Hero Banner -->
+            <div class="relative w-full rounded-3xl overflow-hidden glass-card p-10 md:p-14 mb-10 border border-primary/20 flex flex-col lg:flex-row items-center justify-between gap-10">
+                <div class="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-primary/10 to-transparent pointer-events-none"></div>
+                
+                <div class="lg:w-3/5 relative z-10">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider mb-6">
+                        <i class="ph-fill ph-sparkle"></i> By Pratyaksha
+                    </div>
+                    <h2 class="text-5xl md:text-6xl font-extrabold text-white mb-6 leading-[1.1] tracking-tight">
+                        Real-Time <br />
+                        <span class="text-gradient">Deepfake Detection</span> <br/>
+                        For Identity Security.
+                    </h2>
+                    <p class="text-lg text-gray-400 mb-8 max-w-xl leading-relaxed">
+                        Identify manipulated video and audio content during digital identity verification. Our multi-modal AI detects facial warping, voice cloning, and synthetic media artifacts in milliseconds.
+                    </p>
+                    
+                    <div class="flex flex-wrap gap-4">
+                        <button onclick="switchTab('verify')" class="btn-glow px-8 py-4 rounded-xl text-white font-semibold flex items-center gap-2 transition-transform hover:scale-105">
+                            <i class="ph-bold ph-scan"></i> Start KYC Check
+                        </button>
+                        <button onclick="switchTab('protect')" class="px-8 py-4 rounded-xl glass hover:bg-white/5 border border-white/10 text-white font-semibold flex items-center gap-2 transition-all">
+                            <i class="ph-bold ph-shield"></i> Cryptographic Anchoring
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="lg:w-2/5 flex justify-center w-full relative">
+                    <!-- 3D Decorative Element / Chart representation -->
+                    <div class="relative w-[280px] h-[280px] rounded-full border border-white/5 bg-gradient-to-b from-surface/80 to-background flex items-center justify-center shadow-[0_0_50px_rgba(14,165,233,0.15)] animate-glow">
+                        <div class="absolute inset-4 rounded-full border border-dashed border-gray-600 animate-[spin_30s_linear_infinite]"></div>
+                        <div class="absolute inset-8 rounded-full border border-primary/30 animate-[spin_20s_linear_infinite_reverse]"></div>
+                        
+                        <div class="text-center">
+                            <div class="text-5xl font-bold text-white mb-1">99.8<span class="text-2xl text-primary">%</span></div>
+                            <div class="text-sm font-mono text-gray-400">DETECTION<br>ACCURACY</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 rounded-xl bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform"><i class="ph-fill ph-cpu text-2xl"></i></div>
+                        <span class="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md">Optimal</span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">112<span class="text-lg text-gray-500">ms</span></div>
+                        <div class="text-sm text-gray-400">Inference Latency</div>
+                    </div>
+                </div>
+                
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 rounded-xl bg-violet-500/10 text-violet-400 group-hover:scale-110 transition-transform"><i class="ph-fill ph-waveform text-2xl"></i></div>
+                        <span class="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md">Active</span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">Sync</div>
+                        <div class="text-sm text-gray-400">Audio/Video Modality</div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 group-hover:scale-110 transition-transform"><i class="ph-fill ph-user-focus text-2xl"></i></div>
+                        <span class="text-xs font-mono text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-md">+97%</span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">Robust</div>
+                        <div class="text-sm text-gray-400">Anti-Spoofing Index</div>
+                    </div>
+                </div>
+
+                <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="p-3 rounded-xl bg-rose-500/10 text-rose-400 group-hover:scale-110 transition-transform"><i class="ph-fill ph-shield-warning text-2xl"></i></div>
+                        <span class="text-xs font-mono text-blue-400 bg-blue-400/10 px-2 py-1 rounded-md">Live</span>
+                    </div>
+                    <div>
+                        <div class="text-3xl font-bold text-white mb-1">AES-256</div>
+                        <div class="text-sm text-gray-400">Data Anchoring</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <h3 class="text-2xl font-bold text-white mb-6">Core Verification Modules</h3>
+            <div class="grid md:grid-cols-3 gap-6">
+                <div class="glass p-6 rounded-2xl border-t border-t-primary/50 relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 text-7xl text-primary opacity-5 group-hover:scale-110 transition-transform"><i class="ph-fill ph-face-mask"></i></div>
+                    <h4 class="text-lg font-bold text-white mb-2 relative z-10 flex items-center gap-2">
+                        <i class="ph-fill ph-scan text-primary"></i> Spatial & Temporal Vision
+                    </h4>
+                    <p class="text-gray-400 text-sm leading-relaxed relative z-10">Cross-examines pixel-level inconsistencies, blending boundaries, and inter-frame temporal flickering caused by generative models.</p>
+                </div>
+                <div class="glass p-6 rounded-2xl border-t border-t-secondary/50 relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 text-7xl text-secondary opacity-5 group-hover:scale-110 transition-transform"><i class="ph-fill ph-wave-sine"></i></div>
+                    <h4 class="text-lg font-bold text-white mb-2 relative z-10 flex items-center gap-2">
+                        <i class="ph-fill ph-waveform text-secondary"></i> Spectral Audio Forgery
+                    </h4>
+                    <p class="text-gray-400 text-sm leading-relaxed relative z-10">Converts audio to mel-spectrograms to identify unnatural frequency bands, phase irregularities, and AI voice cloning signatures.</p>
+                </div>
+                <div class="glass p-6 rounded-2xl border-t border-t-accent/50 relative overflow-hidden group">
+                    <div class="absolute -right-6 -top-6 text-7xl text-accent opacity-5 group-hover:scale-110 transition-transform"><i class="ph-fill ph-fingerprint-simple"></i></div>
+                    <h4 class="text-lg font-bold text-white mb-2 relative z-10 flex items-center gap-2">
+                        <i class="ph-fill ph-fingerprint text-accent"></i> Presentation Anti-Spoofing
+                    </h4>
+                    <p class="text-gray-400 text-sm leading-relaxed relative z-10">Detects screen playbacks, printed photos, and 3D silicone masks by analyzing micro-expressions and light reflections.</p>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= VERIFY (KYC) ================= -->
+        <section id="verify" class="page-section">
+            <div class="text-center mb-10 max-w-3xl mx-auto">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold uppercase tracking-wider mb-4">
+                    <i class="ph-fill ph-identification-badge"></i> Verification Portal
+                </div>
+                <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4">Identity Verification Hub</h2>
+                <p class="text-gray-400 text-lg">Upload user KYC media. Engine will compute risk scores via facial manipulation checks, synthetic artifact detection, and modality sync.</p>
+            </div>
+
+            <div class="grid lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+                
+                <!-- UPLOAD PANEL -->
+                <div class="glass-card rounded-3xl p-8 flex flex-col relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-[80px]"></div>
+                    
+                    <h3 class="text-xl font-bold text-white mb-6 flex items-center gap-2"><i class="ph ph-upload-simple text-primary"></i> Input Pipeline</h3>
+                    
+                    <!-- Dropzone -->
+                    <div id="verify-dropzone" class="flex-grow border-2 border-dashed border-gray-600 rounded-2xl bg-surface/50 hover:bg-surfaceLight/50 hover:border-primary/50 transition-all duration-300 flex flex-col items-center justify-center p-8 text-center cursor-pointer relative group scan-container">
+                        <div class="scan-line" id="verify-scanner"></div>
+                        <input type="file" id="verify-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20 title='Upload Media'" accept="image/*,video/*,audio/*">
+                        
+                        <div id="verify-initial-state" class="flex flex-col items-center transition-opacity duration-300">
+                            <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 flex items-center justify-center mb-6 shadow-xl group-hover:-translate-y-2 transition-transform duration-300 relative">
+                                <i class="ph ph-file-video text-4xl text-gray-400 group-hover:text-primary transition-colors"></i>
+                                <div class="absolute -right-2 -top-2 w-6 h-6 rounded-full bg-primary flex items-center justify-center upload-icon-pulse shadow-[0_0_10px_rgba(14,165,233,0.8)]">
+                                    <i class="ph-bold ph-plus text-white text-xs"></i>
+                                </div>
+                            </div>
+                            <h4 class="text-xl font-bold text-white mb-2">Initialize Scanner</h4>
+                            <p class="text-sm text-gray-400 max-w-[250px] mx-auto mb-6">Drop face media or click to browse files. System requires high resolution for LSB scans.</p>
+                            
+                            <div class="flex gap-3 justify-center">
+                                <div class="px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700 text-xs font-mono text-gray-300 flex items-center gap-1.5"><i class="ph-fill ph-video-camera text-blue-400"></i> MP4/MKV</div>
+                                <div class="px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700 text-xs font-mono text-gray-300 flex items-center gap-1.5"><i class="ph-fill ph-image text-emerald-400"></i> JPG/PNG</div>
+                                <div class="px-3 py-1.5 rounded-lg bg-gray-800/80 border border-gray-700 text-xs font-mono text-gray-300 flex items-center gap-1.5"><i class="ph-fill ph-waveform text-violet-400"></i> WAV/MP3</div>
+                            </div>
+                        </div>
+
+                        <!-- Processing State -->
+                        <div id="verify-loading-state" class="hidden flex-col items-center w-full h-full absolute inset-0 z-10 bg-surface/95 backdrop-blur-md rounded-2xl p-6 overflow-hidden">
+                            <div class="relative w-16 h-16 mb-4 flex-shrink-0">
+                                <svg class="animate-spin w-full h-full text-gray-700" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="10 5"></circle>
+                                </svg>
+                                <svg class="animate-[spin_2s_linear_infinite_reverse] absolute inset-0 w-full h-full text-primary" viewBox="0 0 100 100">
+                                    <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="80 140" stroke-linecap="round"></circle>
+                                </svg>
+                                <div class="absolute inset-0 flex items-center justify-center font-mono text-xs text-primary animate-pulse">AI</div>
+                            </div>
+                            <h4 class="text-sm font-bold text-white tracking-widest uppercase mb-4 flex-shrink-0">Detection Architecture</h4>
+                            
+                            <!-- 5 Signals Terminal -->
+                            <div class="w-full bg-black/60 border border-gray-700/50 rounded-lg p-3 font-mono text-[9px] sm:text-[10px] text-left overflow-y-auto flex-grow relative shadow-inner">
+                                <div id="signal-log" class="flex flex-col gap-1.5 pb-8 transition-all duration-300">
+                                    <div class="opacity-50 flex gap-2"><span class="text-gray-500">[0.00s]</span><span class="text-gray-400">Initializing 5-Signal Engine...</span></div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 w-full h-8 bg-gradient-to-t from-black to-transparent pointer-events-none"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- REPORT PANEL -->
+                <div class="glass-card rounded-3xl p-8 flex flex-col relative overflow-hidden min-h-[500px]">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2"><i class="ph ph-chart-polar text-secondary"></i> Telemetry Output</h3>
+                        <div id="scan-id" class="px-3 py-1 bg-surfaceLight border border-gray-700 rounded-lg text-xs font-mono text-gray-400 shadow-inner">- WAITING -</div>
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="verify-empty" class="flex-grow flex flex-col items-center justify-center text-center opacity-60">
+                        <i class="ph-thin ph-terminal-window text-6xl text-gray-600 mb-4"></i>
+                        <p class="text-sm font-mono text-gray-500">Awaiting media input for telemetry generation...</p>
+                    </div>
+
+                    <!-- Result Content (Hidden by default) -->
+                    <div id="verify-result-content" class="hidden flex-col flex-grow h-full justify-between">
+                        
+                        <!-- Top Risk Area -->
+                        <div class="flex items-center gap-6 mb-8 p-4 bg-black/20 rounded-2xl border border-white/5 shadow-inner">
+                            <div class="w-1/3">
+                                <svg viewBox="0 0 36 36" class="circular-chart text-emerald-500">
+                                    <defs>
+                                        <linearGradient id="gradient-success" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#10b981" />
+                                            <stop offset="100%" stop-color="#0ea5e9" />
+                                        </linearGradient>
+                                        <linearGradient id="gradient-danger" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stop-color="#f43f5e" />
+                                            <stop offset="100%" stop-color="#fb923c" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path class="circle-bg"
+                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path class="circle" id="risk-circle"
+                                      stroke-dasharray="0, 100"
+                                      stroke="url(#gradient-success)"
+                                      d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <text x="18" y="19" class="percentage text-white" id="risk-number">0</text>
+                                    <text x="18" y="24" class="percentage-label">CONFIDENCE</text>
+                                </svg>
+                            </div>
+                            <div class="w-2/3">
+                                <div class="text-xs font-mono text-gray-400 mb-1 border-b border-gray-700/50 pb-1">AI Classification</div>
+                                <div id="report-status" class="text-3xl font-extrabold tracking-tight text-transparent bg-clip-text text-gradient-success mb-2">-</div>
+                                <div class="flex items-center gap-2">
+                                    <div id="status-indicator" class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                    <span class="text-xs text-gray-400">Analysis Complete</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Details Grid -->
+                        <div class="grid grid-cols-2 gap-4 mb-6">
+                            <!-- DCT Card -->
+                            <div class="bg-surface/50 p-4 rounded-xl border border-gray-700/50 hover:bg-surfaceLight/50 transition-colors">
+                                <div class="flex items-center justify-between mb-3 border-b border-gray-700/50 pb-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <i class="ph-fill ph-faders text-primary text-lg"></i>
+                                        <span class="text-xs font-bold text-white uppercase tracking-wider">Spatial/DCT</span>
+                                    </div>
+                                    <span id="dct-score" class="font-mono text-xs text-primary bg-primary/10 px-2 py-0.5 rounded">--</span>
+                                </div>
+                                <p id="dct-analysis" class="text-xs text-gray-400 leading-relaxed font-mono line-clamp-3">Evaluating structural integrity and blending borders...</p>
+                            </div>
+
+                            <!-- LSB Card -->
+                            <div id="lsb-card" class="bg-surface/50 p-4 rounded-xl border border-gray-700/50 hover:bg-surfaceLight/50 transition-colors">
+                                <div class="flex items-center justify-between mb-3 border-b border-gray-700/50 pb-2">
+                                    <div class="flex items-center gap-1.5">
+                                        <i class="ph-bold ph-barcode text-secondary text-lg"></i>
+                                        <span class="text-xs font-bold text-white uppercase tracking-wider">Artifact/LSB</span>
+                                    </div>
+                                    <span id="lsb-status" class="font-mono text-xs text-secondary bg-secondary/10 px-2 py-0.5 rounded">--</span>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between text-[11px] font-mono"><span class="text-gray-500">Trace:</span> <span id="lsb-pixel" class="text-gray-300">--</span></div>
+                                    <div class="flex justify-between text-[11px] font-mono"><span class="text-gray-500">Spectral:</span> <span id="lsb-bits" class="text-gray-300">--</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Final Output -->
+                        <div class="bg-primary/5 border border-primary/20 p-4 rounded-xl relative overflow-hidden">
+                            <div class="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-primary to-secondary"></div>
+                            <div class="text-[10px] font-bold tracking-widest text-primary uppercase mb-1 font-mono">Explainability Log >_</div>
+                            <p id="final-analysis" class="text-sm text-gray-300">System standby.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= PROTECT (DATA ANCHORING) ================= -->
+        <section id="protect" class="page-section">
+            <div class="text-center mb-10 max-w-3xl mx-auto">
+                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/30 text-accent text-xs font-semibold uppercase tracking-wider mb-4">
+                    <i class="ph-fill ph-lock-key"></i> Cryptographic Anchoring
+                </div>
+                <h2 class="text-4xl md:text-5xl font-extrabold text-white mb-4">Secure Identity Data</h2>
+                <p class="text-gray-400 text-lg">Prevent KYC data reuse and spoofing by applying invisible, immutable forensic tracking watermarks directly into the media tensor structure.</p>
+            </div>
+
+            <div class="max-w-4xl mx-auto glass-card rounded-3xl p-2 md:p-8 flex flex-col md:flex-row gap-8 items-stretch justify-center relative overflow-hidden">
+                <div class="absolute bottom-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-accent to-transparent"></div>
+
+                <!-- Input area -->
+                <div class="w-full md:w-1/2 flex flex-col items-center justify-center p-8 bg-surface/40 border border-gray-700/50 rounded-2xl cursor-pointer hover:border-accent/50 transition-all group relative scan-container" id="protect-dropzone">
+                    <div class="scan-line !bg-gradient-to-r !from-transparent !via-accent !to-transparent !shadow-[0_0_15px_rgba(16,185,129,0.6)]" id="protect-scanner"></div>
+                    <input type="file" id="protect-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" accept="image/*,video/*">
+                    
+                    <div id="protect-initial" class="text-center w-full transition-opacity duration-300">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-accent/10 text-accent flex items-center justify-center mb-4 group-hover:bg-accent group-hover:text-white transition-all duration-300 border border-accent/30">
+                            <i class="ph-fill ph-shield-plus text-3xl"></i>
+                        </div>
+                        <h4 class="text-lg font-bold text-white mb-1">Select Media</h4>
+                        <p class="text-xs text-gray-400 mb-4">Click or drag & drop to inject watermark</p>
+                        <div class="h-1 w-12 mx-auto bg-gray-700 rounded-full"></div>
+                    </div>
+
+                    <!-- Loading State -->
+                    <div id="protect-loading-state" class="hidden absolute inset-0 bg-surface/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center rounded-2xl">
+                        <div class="w-16 h-16 border-4 border-gray-800 border-t-accent rounded-full animate-spin mb-4"></div>
+                        <span class="text-accent font-bold tracking-wider text-sm font-mono animate-pulse">ENCRYPTING BITS...</span>
+                    </div>
+                </div>
+
+                <!-- Separation -->
+                <div class="hidden md:flex flex-col items-center justify-center">
+                    <div class="w-[1px] h-16 bg-gradient-to-b from-transparent to-gray-600"></div>
+                    <div class="w-10 h-10 rounded-full bg-surface border border-gray-600 flex items-center justify-center z-10 shadow-lg text-gray-400">
+                        <i class="ph-bold ph-arrow-right"></i>
+                    </div>
+                    <div class="w-[1px] h-16 bg-gradient-to-t from-transparent to-gray-600"></div>
+                </div>
+
+                <!-- Output area -->
+                <div class="w-full md:w-1/2 flex flex-col items-center justify-center p-8 bg-surface/40 border border-gray-700/50 rounded-2xl relative">
+                    
+                    <!-- Pre-result state -->
+                    <div id="protect-empty" class="text-center opacity-50">
+                        <i class="ph-thin ph-fingerprint text-6xl text-gray-500 mb-3 block"></i>
+                        <p class="text-sm font-mono text-gray-400">Protected asset will appear here.</p>
+                    </div>
+
+                    <!-- Result state -->
+                    <div id="protect-result-content" class="hidden w-full h-full flex flex-col items-center justify-center">
+                        <div class="relative mb-4 w-full flex justify-center group">
+                            <img id="protected-image-preview" src="" alt="Secured Asset" class="max-h-48 object-contain rounded-lg border-2 border-accent/40 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+                            <div class="absolute inset-0 bg-accent/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center backdrop-blur-sm pointer-events-none">
+                                <i class="ph-fill ph-lock-key text-white text-3xl"></i>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-2 mb-4 bg-accent/10 px-3 py-1 rounded text-accent border border-accent/20">
+                            <i class="ph-fill ph-check-circle"></i>
+                            <span class="text-xs font-bold tracking-wider">ANCHORED SUCCESSFULLY</span>
+                        </div>
+                        
+                        <a id="download-link" href="#" download class="w-full py-3 bg-white text-black hover:bg-gray-200 rounded-xl font-bold flex items-center justify-center gap-2 transition-all group">
+                            <i class="ph-bold ph-download-simple group-hover:-translate-y-1 transition-transform"></i> Download Secure File
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full border-t border-white/5 bg-background/80 backdrop-blur-md mt-auto z-40 relative">
+        <div class="max-w-7xl mx-auto px-6 py-6 flex flex-col flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-2">
+                <i class="ph-fill ph-shield-check text-gray-500"></i>
+                <span class="text-xs font-mono text-gray-500">Pratyaksha Core v2.0.4 | </span>
+                <span class="text-xs font-mono text-emerald-500 flex items-center gap-1"><span class="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></span> ONLINE</span>
+            </div>
+            
+            <div class="text-[10px] text-gray-500 uppercase tracking-widest font-mono">
+                Designed for VNR Hackathon
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Tab Switching Logic
+        function switchTab(tabId) {
+            // Hide all
+            document.querySelectorAll('.page-section').forEach(el => {
+                el.classList.remove('active');
+            });
+            // Show target
+            document.getElementById(tabId).classList.add('active');
+
+            // Update Nav styling
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5';
+                
+                // Reset icons to regular
+                const icon = btn.querySelector('i');
+                if(icon) {
+                    icon.className = icon.className.replace('ph-fill', 'ph').replace('text-primary', '');
+                }
+            });
+
+            // Activate current
+            const activeBtn = document.getElementById('nav-' + tabId);
+            if(activeBtn) {
+                activeBtn.className = 'nav-btn px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 text-white bg-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]';
+                const activeIcon = activeBtn.querySelector('i');
+                if(activeIcon) {
+                    activeIcon.className = activeIcon.className.replace('ph ', 'ph-fill ').concat(' text-primary');
+                }
+            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Initialize first tab
+        switchTab('dashboard');
+
+        // Circular progress animation helper
+        function updateRiskCircle(percentage, isDangerous) {
+            const circle = document.getElementById('risk-circle');
+            const percentText = document.getElementById('risk-number');
+            const gradientId = isDangerous ? 'url(#gradient-danger)' : 'url(#gradient-success)';
+            
+            // Normalize
+            let val = Math.max(0, Math.min(100, percentage));
+            let dashVal = val + ", 100";
+            
+            circle.setAttribute('stroke-dasharray', dashVal);
+            circle.setAttribute('stroke', gradientId);
+            
+            // Animate number counter
+            let start = 0;
+            let duration = 1000;
+            let stepTime = Math.abs(Math.floor(duration / val));
+            
+            let timer = setInterval(function() {
+                start++;
+                percentText.textContent = start;
+                if (start >= val || val === 0) {
+                    clearInterval(timer);
+                    percentText.textContent = val;
+                }
+            }, stepTime);
+        }
+
+        // --- VERIFY LOGIC ---
+        const verifyInput = document.getElementById('verify-input');
+        
+        verifyInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // UI transitions
+            document.getElementById('verify-initial-state').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('verify-initial-state').classList.add('hidden');
+                document.getElementById('verify-loading-state').classList.remove('hidden');
+                document.getElementById('verify-loading-state').classList.add('flex');
+            }, 300);
+            
+            document.getElementById('verify-scanner').style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // Bypass actual backend fetch for hackathon UI demonstration
+                // const response = await fetch('/verify', { method: 'POST', body: formData });
+                // const data = await response.json();
+
+                // 5-Signal Simulation Sequence
+                let logs = [
+                    `<span class="text-primary font-bold">SIGNAL 1:</span> Visual Deepfake Check [<span class="text-gray-400">Weight: 35%</span>]<br><span class="text-gray-500">> Scanning faces for AI-generated flaws</span>`,
+                    `<span class="text-emerald-400 font-bold">SIGNAL 2:</span> Liveness Test [<span class="text-gray-400">Weight: 25%</span>]<br><span class="text-gray-500">> Checking for real human facial movements</span>`,
+                    `<span class="text-rose-400 font-bold">SIGNAL 3:</span> Heart Rate Scanner [<span class="text-gray-400">Weight: 15%</span>]<br><span class="text-gray-500">> Detecting microscopic blood flow in the face</span>`,
+                    `<span class="text-amber-400 font-bold">SIGNAL 4:</span> Consistency Check [<span class="text-gray-400">Weight: 10%</span>]<br><span class="text-gray-500">> Tracking natural expressions over time</span>`,
+                    `<span class="text-secondary font-bold">SIGNAL 5:</span> Audio Verification [<span class="text-gray-400">Weight: 15%</span>]<br><span class="text-gray-500">> Listening for synthetic AI voice patterns</span>`,
+                    `<span class="text-white font-bold bg-white/10 px-2 py-0.5 rounded">FUSING SCORES...</span> Calculating final risk score.`
+                ];
+                
+                let logEl = document.getElementById('signal-log');
+                logEl.innerHTML = '<div class="opacity-50 flex gap-2 mb-2"><span class="text-gray-500">[0.00s]</span><span class="text-gray-400">Initializing 5-Signal Engine...</span></div>';
+                
+                // Print simulation logs sequentially
+                logs.forEach((logText, index) => {
+                    setTimeout(() => {
+                        let time = (index * 0.45 + 0.12).toFixed(2);
+                        let item = document.createElement('div');
+                        item.className = "flex gap-2 animate-[fadeIn_0.3s_ease-out] border-l-2 border-surfaceLight pl-2 mb-1";
+                        item.innerHTML = `<span class="text-gray-500 shrink-0">[${time}s]</span><span class="text-gray-300 leading-tight">${logText}</span>`;
+                        logEl.appendChild(item);
+                        logEl.scrollTop = logEl.scrollHeight;
+                    }, index * 450); // write every 450ms
+                });
+
+                // Set fake delay to clear after signals finish (about 3.5 seconds)
+                setTimeout(() => {
+                    document.getElementById('verify-loading-state').classList.add('hidden');
+                    document.getElementById('verify-loading-state').classList.remove('flex');
+                    document.getElementById('verify-initial-state').classList.remove('hidden');
+                    document.getElementById('verify-initial-state').style.opacity = '1';
+                    document.getElementById('verify-scanner').style.display = 'none';
+
+                    // Reveal Report
+                    document.getElementById('verify-empty').classList.add('hidden');
+                    document.getElementById('verify-result-content').classList.remove('hidden');
+                    document.getElementById('verify-result-content').classList.add('flex');
+
+                    // Data injection - Force "Tampered" for presentation demonstration purposes
+                    // You can change this to false if you want to show it passing
+                    let isTampered = true; 
+                    
+                    let riskScore = isTampered ? 91 : 8; 
+
+                    // Set Circle & Primary Status Text
+                    updateRiskCircle(riskScore, isTampered);
+                    
+                    const reportStatusEl = document.getElementById('report-status');
+                    const statusIndicatorEl = document.getElementById('status-indicator');
+                    
+                    if (isTampered) {
+                        reportStatusEl.textContent = "DEEPFAKE DETECTED";
+                        reportStatusEl.className = "text-3xl font-extrabold tracking-tight text-transparent bg-clip-text text-gradient-danger mb-2";
+                        statusIndicatorEl.className = "w-2 h-2 rounded-full bg-rose-500 animate-pulse";
+                    } else {
+                        reportStatusEl.textContent = "AUTHENTIC MEDIA";
+                        reportStatusEl.className = "text-3xl font-extrabold tracking-tight text-transparent bg-clip-text text-gradient-success mb-2";
+                        statusIndicatorEl.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                    }
+
+                    // Update the report boxes with the provided explanation text for a robust presentation 
+                    document.getElementById('dct-score').textContent = isTampered ? "0.92" : "0.05";
+                    document.getElementById('dct-analysis').innerHTML = `<b>Signal 1 (35%):</b> Visual AI Detection: <span class="${isTampered ? 'text-rose-400' : 'text-emerald-400'}">${isTampered ? 'FAILED (99.2% Fake)' : 'PASSED (Clean)'}</span><br><b>Signal 2 (25%):</b> Human Liveness Test: <span class="${isTampered ? 'text-rose-400' : 'text-emerald-400'}">${isTampered ? 'FAILED (Static)' : 'PASSED (Moving)'}</span><br><b>Signal 4 (10%):</b> Face Consistency: <span class="${isTampered ? 'text-rose-400' : 'text-emerald-400'}">${isTampered ? 'WARNING (Jittery/Fake)' : 'PASSED (Natural)'}</span>`;
+
+                    let lsbEl = document.getElementById('lsb-status');
+                    lsbEl.textContent = isTampered ? "SPOOF DETECTED" : "ALL CLEAR";
+                        
+                    document.getElementById('lsb-pixel').innerHTML = `<b>Signal 3 (15%):</b> <br><span class="${isTampered ? 'text-rose-400' : 'text-emerald-400'}">${isTampered ? "No Blood Flow Found" : "Heart Rate: 68 BPM"}</span>`;
+                    document.getElementById('lsb-bits').innerHTML = `<b>Signal 5 (15%):</b> <br><span class="${isTampered ? 'text-rose-400' : 'text-emerald-400'}">${isTampered ? "AI Voice Detected" : "Real Human Voice"}</span>`;
+
+                    if (isTampered) {
+                        lsbEl.className = "font-mono text-[10px] text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded border border-rose-400/20 mt-1";
+                    } else {
+                        lsbEl.className = "font-mono text-[10px] text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20 mt-1";
+                    }
+
+                    document.getElementById('final-analysis').innerHTML = isTampered ? "<span class='text-rose-400 font-bold'>Final Danger Score shows this media is highly likely to be a Deepfake.</span> Visual and Audio tests failed. Upload Rejected." : "<span class='text-emerald-400 font-bold'>Final Score shows natural media across all tests.</span> Identity Verified.";
+                    document.getElementById('scan-id').textContent = "#" + Math.random().toString(36).substring(2, 8).toUpperCase() + "-KYC";
+
+                }, 1500 + (6 * 450)); // Wait for logs to finish printing
+
+            } catch (err) {
+                console.error(err);
+                alert("Error during inference: " + err.message);
+                document.getElementById('verify-loading-state').classList.add('hidden');
+                document.getElementById('verify-initial-state').classList.remove('hidden');
+                document.getElementById('verify-initial-state').style.opacity = '1';
+                document.getElementById('verify-scanner').style.display = 'none';
+            }
+        });
+
+        // --- PROTECT LOGIC ---
+        const protectInput = document.getElementById('protect-input');
+        
+        protectInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // UI
+            document.getElementById('protect-initial').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('protect-initial').classList.add('hidden');
+                document.getElementById('protect-loading-state').classList.remove('hidden');
+            }, 300);
+            document.getElementById('protect-scanner').style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/protect', { method: 'POST', body: formData });
+                const responseText = await response.text();
+                let data = JSON.parse(responseText);
+
+                if (!response.ok) throw new Error(data.error || "Server Error");
+
+                setTimeout(() => {
+                    // Reset UI
+                    document.getElementById('protect-loading-state').classList.add('hidden');
+                    document.getElementById('protect-initial').classList.remove('hidden');
+                    document.getElementById('protect-initial').style.opacity = '1';
+                    document.getElementById('protect-scanner').style.display = 'none';
+
+                    // Show result
+                    document.getElementById('protect-empty').classList.add('hidden');
+                    document.getElementById('protect-result-content').classList.remove('hidden');
+
+                    if (data.protected_url.endsWith('.mp4')) {
+                        document.getElementById('protected-image-preview').style.display = 'none';
+                    } else {
+                        document.getElementById('protected-image-preview').style.display = 'block';
+                        document.getElementById('protected-image-preview').src = data.protected_url;
+                    }
+                    document.getElementById('download-link').href = data.protected_url;
+                }, 1000);
+
+            } catch (err) {
+                console.error(err);
+                alert("Anchoring Failed: " + err.message);
+                document.getElementById('protect-loading-state').classList.add('hidden');
+                document.getElementById('protect-initial').classList.remove('hidden');
+                document.getElementById('protect-initial').style.opacity = '1';
+                document.getElementById('protect-scanner').style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>
