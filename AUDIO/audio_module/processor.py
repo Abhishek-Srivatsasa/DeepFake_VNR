@@ -5,17 +5,23 @@ def prepare_audio_for_model(file_path, target_sr=16000, duration=5):
     # 1. Load and Downsample automatically to 16kHz
     audio, sr = librosa.load(file_path, sr=target_sr)
     
-    # 2. Ensure exactly 5 seconds (Padding or Trimming)
+    # 2. Ensure exactly 5 seconds (Tiling/Wrapping instead of Zero Padding)
     required_samples = target_sr * duration
     if len(audio) < required_samples:
-        audio = np.pad(audio, (0, required_samples - len(audio)))
+        # Zero-padding introduces absolute silence which deepfake CNNs flag as synthetic anomalies.
+        # Instead, we tile (repeat/wrap) the audio to fill the 5 seconds naturally.
+        audio = np.resize(audio, required_samples)
     else:
         audio = audio[:required_samples]
         
-    # 3. Generate Mel Spectrogram (Matching the repo's parameters)
-    # The repo uses n_mels=128
     spectrogram = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=128)
     log_spectrogram = librosa.power_to_db(spectrogram)
+    
+    # MUST Normalize mathematically to prevent the Neural Network from saturating to 1.0!
+    # Apply Standard Scaling (Z-score Normalization)
+    mean = np.mean(log_spectrogram)
+    std = np.std(log_spectrogram)
+    log_spectrogram = (log_spectrogram - mean) / (std + 1e-8)
     
     # Ensure exact shape (128, 109) to prevent training/inference mismatch
     max_frames = 109

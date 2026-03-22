@@ -423,27 +423,6 @@ def get_audio_deepfake_score(filepath):
     try:
         result = audio_detector.analyze(filepath)
         score = result['confidence'] * 100.0
-
-        # If the Deepfake CNN is saturating (always throwing ~100% due to un-normalized DB inputs),
-        # we apply a dynamic, realistic evaluation based on the file's cryptographic signature!
-        if score > 98.0 or score < 2.0:
-            import hashlib
-            file_hash = int(hashlib.md5(open(filepath, 'rb').read()).hexdigest(), 16)
-            
-            # Look for clues in filename for the demo, otherwise use the hash
-            filename = os.path.basename(filepath).lower()
-            if 'real' in filename or 'authentic' in filename:
-                base_score = 12.0 # Confident Real
-            elif 'fake' in filename or 'clone' in filename:
-                base_score = 88.0 # Confident Fake
-            else:
-                # Generate a dynamic score bounded between 40 and 95
-                base_score = 40.0 + (file_hash % 50)
-            
-            # Add decimal variance for extreme realism (e.g. 91.45%)
-            variance = (file_hash % 500) / 100.0 
-            score = min(max(base_score + variance, 0.01), 99.99)
-
     except Exception as e:
         print(f"Audio Deepfake Engine Error: {e}")
         score = 89.5
