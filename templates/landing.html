@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>PRATYAKSHA AI — Deepfake Detection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet"/>
+
+  <style>
+  /* ═══════════════════════════════════════════
+     TOKENS
+  ═══════════════════════════════════════════ */
+  :root {
+    --bg:       #eceff8;
+    --navy:     #0b0d1f;
+    --purple:   #5b2fff;
+    --cyan:     #00cfff;
+    --blue:     #1757ff;
+    --muted:    #6b7a99;
+    --grid:     rgba(91,47,255,.06);
+    --border:   rgba(91,47,255,.14);
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'Space Mono', monospace;
+    background: var(--bg);
+    color: var(--navy);
+    overflow-x: hidden;
+  }
+
+  /* ═══════════════════════════════════════════
+     BACKGROUND — GRID + RULED TOP
+  ═══════════════════════════════════════════ */
+  .bg-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  /* top 3-colour ruled bar */
+  .top-rule {
+    position: fixed; top: 0; left: 0; right: 0; height: 5px; z-index: 200;
+    background: linear-gradient(90deg, var(--purple) 0%, var(--cyan) 50%, var(--blue) 100%);
+  }
+
+  /* left side bar */
+  .left-rule {
+    position: fixed; top: 0; bottom: 0; left: 0; width: 5px; z-index: 200;
+    background: linear-gradient(180deg, var(--purple) 0%, var(--cyan) 50%, var(--blue) 100%);
+  }
+
+  /* ═══════════════════════════════════════════
+     PARTICLES
+  ═══════════════════════════════════════════ */
+  #pts { position: fixed; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; }
+  .pt {
+    position: absolute; border-radius: 50%;
+    animation: ptFloat ease-in-out infinite alternate;
+  }
+  @keyframes ptFloat {
+    from { transform: translateY(0) scale(1); }
+    to   { transform: translateY(-14px) scale(1.25); }
+  }
+
+  /* ═══════════════════════════════════════════
+     NAV
+  ═══════════════════════════════════════════ */
+  nav {
+    position: fixed; top: 5px; left: 5px; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 52px 18px 48px;
+    background: rgba(236,239,248,0.82);
+    backdrop-filter: blur(18px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-family: 'Syne', sans-serif; font-weight: 900;
+    font-size: .88rem; letter-spacing: .22em; text-transform: uppercase;
+    color: var(--navy); text-decoration: none;
+  }
+  .nav-logo b { color: var(--purple); font-weight: 900; }
+
+  .nav-links { display: flex; gap: 40px; list-style: none; }
+  .nav-links a {
+    font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
+    font-weight: 700; text-decoration: none; color: var(--muted);
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--purple); }
+
+  /* ═══════════════════════════════════════════
+     HERO
+  ═══════════════════════════════════════════ */
+  #hero {
+    position: relative; z-index: 5;
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 120px 52px 80px 52px;
+    overflow: hidden;
+  }
+
+  /* ── Spinning radial / chakra wheel ── */
+  .radial-wrap {
+    position: absolute;
+    right: -80px; top: 50%;
+    transform: translateY(-50%);
+    width: 580px; height: 580px;
+    pointer-events: none;
+    opacity: 0.11;
+  }
+  .radial-outer { width: 100%; height: 100%; animation: spin 35s linear infinite; }
+  .radial-inner { position: absolute; inset: 0; animation: spin 18s linear infinite reverse; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scan line that sweeps vertically ── */
+  .scanline {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, transparent 0%, var(--cyan) 40%, var(--purple) 60%, transparent 100%);
+    opacity: 0; animation: scanMove 5s ease-in-out infinite;
+    pointer-events: none; z-index: 2;
+  }
+  @keyframes scanMove {
+    0%   { top: 0%;   opacity: 0; }
+    10%  { opacity: .35; }
+    90%  { opacity: .35; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* ── Corner labels ── */
+  .clabel {
+    position: absolute; font-size: .56rem; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(91,47,255,.3); font-weight: 700;
+    pointer-events: none;
+  }
+  .cl-tl { top: 90px; left: 52px; }
+  .cl-tr { top: 90px; right: 52px; text-align: right; }
+  .cl-bl { bottom: 48px; left: 52px; }
+  .cl-br { bottom: 48px; right: 52px; text-align: right; }
+
+  /* ── Hero content ── */
+  .hcontent { position: relative; z-index: 3; max-width: 860px; }
+
+  /* status line */
+  .status-line {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 30px;
+  }
+  .sdot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--cyan);
+    box-shadow: 0 0 0 3px rgba(0,207,255,.2);
+    animation: sdot 2s ease-in-out infinite;
+  }
+  @keyframes sdot {
+    0%,100% { box-shadow: 0 0 0 3px rgba(0,207,255,.2); }
+    50%     { box-shadow: 0 0 0 8px rgba(0,207,255,.04); }
+  }
+  .stxt {
+    font-size: .64rem; letter-spacing: .2em; text-transform: uppercase;
+    font-weight: 700; color: var(--muted);
+  }
+  .stxt em { color: var(--cyan); font-style: normal; }
+
+  /* HUGE title */
+  .hero-name {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(5.5rem, 13vw, 11rem);
+    font-weight: 900; line-height: .88;
+    letter-spacing: -.03em; color: var(--navy);
+    position: relative;
+    user-select: none;
+  }
+  /* glitch on hover */
+  .hero-name:hover {
+    animation: glitch .3s steps(2) infinite;
+  }
+  @keyframes glitch {
+    0%   { text-shadow:  4px 0 var(--cyan), -4px 0 var(--purple); }
+    25%  { text-shadow: -4px 0 var(--cyan),  4px 0 var(--purple); }
+    50%  { text-shadow:  4px 2px var(--purple),-4px -2px var(--cyan); }
+    75%  { text-shadow: -2px -1px var(--cyan), 2px 1px var(--purple); }
+    100% { text-shadow: none; }
+  }
+
+  /* tagline */
+  .hero-tag {
+    margin-top: 26px;
+    font-size: .92rem; color: var(--muted);
+    letter-spacing: .04em; line-height: 1.7;
+    max-width: 540px;
+  }
+
+  /* buttons */
+  .hero-btns { display: flex; gap: 14px; margin-top: 40px; flex-wrap: wrap; }
+
+  .btn-mono {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 13px 30px;
+    font-family: 'Space Mono', monospace;
+    font-size: .65rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+    text-decoration: none; cursor: pointer; border: none;
+    position: relative; overflow: hidden; transition: color .2s;
+  }
+  /* ghost — dark outline */
+  .btn-mono.ghost {
+    background: transparent; color: var(--navy);
+    border: 1.5px solid var(--navy);
+  }
+  .btn-mono.ghost:hover { background: var(--navy); color: var(--bg); }
+
+  /* accent — purple/cyan outline */
+  .btn-mono.accent {
+    background: transparent;
+    border: 1.5px solid var(--purple);
+    color: var(--purple);
+  }
+  .btn-mono.accent::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    transform: scaleX(0); transform-origin: left; transition: transform .28s ease;
+    z-index: 0;
+  }
+  .btn-mono.accent:hover::before { transform: scaleX(1); }
+  .btn-mono.accent:hover { color: #fff; border-color: transparent; }
+  .btn-mono.accent span { position: relative; z-index: 1; }
+
+  /* ═══════════════════════════════════════════
+     DIVIDER  ↓ hero into dark band
+  ═══════════════════════════════════════════ */
+  .wave-div {
+    position: relative; z-index: 5; line-height: 0; overflow: hidden;
+    background: var(--bg);
+  }
+  .wave-div svg { display: block; width: 100%; }
+
+  /* ═══════════════════════════════════════════
+     TICKER
+  ═══════════════════════════════════════════ */
+  .ticker-wrap {
+    position: relative; z-index: 5;
+    background: var(--navy); overflow: hidden;
+  }
+  .ticker-track {
+    display: flex; width: max-content;
+    animation: tick 22s linear infinite;
+  }
+  @keyframes tick { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+  .tick-item {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 20px 44px; border-right: 1px solid rgba(255,255,255,.05);
+    flex-shrink: 0;
+  }
+  .tick-v {
+    font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 900;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .tick-l {
+    font-size: .58rem; letter-spacing: .14em; text-transform: uppercase;
+    color: rgba(255,255,255,.28); font-weight: 700;
+  }
+
+  /* ═══════════════════════════════════════════
+     SECTIONS
+  ═══════════════════════════════════════════ */
+  .section {
+    position: relative; z-index: 5;
+    padding: 104px 52px;
+  }
+  .section.dark  { background: #0e1024; }
+  .section.light { background: var(--bg); }
+  .section.mid   { background: #f2f4fc; }
+
+  .sec-eyebrow {
+    display: flex; align-items: center; gap: 12px;
+    font-size: .58rem; letter-spacing: .22em; text-transform: uppercase;
+    font-weight: 700; color: var(--cyan); margin-bottom: 18px;
+  }
+  .sec-eyebrow::before { content: ''; width: 32px; height: 1.5px; background: var(--cyan); display: block; }
+
+  .sec-h {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem,4vw,3.2rem); font-weight: 900;
+    line-height: 1.06; letter-spacing: -.025em;
+    margin-bottom: 14px;
+  }
+  .section.dark .sec-h { color: #fff; }
+  .section.light .sec-h,
+  .section.mid   .sec-h { color: var(--navy); }
+
+  .sec-p {
+    font-size: .8rem; line-height: 1.85; max-width: 520px; margin-bottom: 52px;
+  }
+  .section.dark .sec-p  { color: rgba(255,255,255,.4); }
+  .section.light .sec-p,
+  .section.mid   .sec-p { color: var(--muted); }
+
+  /* ── Modes grid ── */
+  .modes-grid {
+    display: grid; grid-template-columns: repeat(4,1fr);
+    border-top: 1px solid rgba(255,255,255,.06);
+    border-left: 1px solid rgba(255,255,255,.06);
+  }
+  .mode-card {
+    border-right: 1px solid rgba(255,255,255,.06);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+    padding: 40px 28px;
+    position: relative; overflow: hidden;
+    transition: background .3s;
+  }
+  .mode-card::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: var(--grad, linear-gradient(90deg, var(--purple), var(--cyan)));
+    transform: scaleX(0); transform-origin: left; transition: transform .35s;
+  }
+  .mode-card:hover { background: rgba(255,255,255,.03); }
+  .mode-card:hover::after { transform: scaleX(1); }
+
+  .mc-no   { font-size: .56rem; letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.2); font-weight: 700; margin-bottom: 18px; }
+  .mc-icon { font-size: 1.9rem; margin-bottom: 16px; display: block; }
+  .mc-h    { font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 800; color: #fff; margin-bottom: 10px; }
+  .mc-p    { font-size: .73rem; color: rgba(255,255,255,.38); line-height: 1.7; }
+  .mc-tag  {
+    margin-top: 20px; display: inline-block;
+    font-size: .56rem; letter-spacing: .14em; text-transform: uppercase;
+    font-weight: 700; padding: 5px 10px;
+    border: 1px solid rgba(91,47,255,.35); color: #9b78ff;
+  }
+
+  /* Clickable mode card */
+  .mode-card.clickable { cursor: pointer; }
+  .mode-card.clickable:hover { background: rgba(91,47,255,.08); }
+
+  /* ── Arch table ── */
+  .arch-table {
+    width: 100%; border-collapse: collapse;
+    font-size: .76rem; border: 1px solid var(--border);
+  }
+  .arch-table thead tr { border-bottom: 2px solid var(--border); }
+  .arch-table th {
+    text-align: left; padding: 14px 22px;
+    font-size: .58rem; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--purple); background: rgba(91,47,255,.04);
+  }
+  .arch-table td {
+    padding: 16px 22px; border-bottom: 1px solid var(--border);
+    color: var(--muted); vertical-align: top; line-height: 1.65;
+  }
+  .arch-table td:first-child {
+    font-family: 'Syne', sans-serif; font-weight: 800; font-size: .86rem;
+    color: var(--navy); white-space: nowrap;
+  }
+  .arch-table tr:hover td { background: rgba(91,47,255,.03); }
+  .abadge {
+    font-size: .54rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+    padding: 4px 9px; background: rgba(0,207,255,.07); color: var(--cyan);
+    border: 1px solid rgba(0,207,255,.2);
+  }
+
+  /* ── About two-col ── */
+  .about-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center;
+  }
+  .about-left p {
+    font-size: .78rem; color: var(--muted); line-height: 1.9; margin-bottom: 18px;
+  }
+
+  /* signal bars */
+  .bars { display: flex; flex-direction: column; gap: 16px; }
+  .bar-row { display: flex; align-items: center; gap: 14px; }
+  .bar-lbl { font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: var(--muted); width: 110px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 5px; background: var(--border); overflow: hidden; }
+  .bar-fill  { height: 100%; background: linear-gradient(90deg, var(--purple), var(--cyan)); transform-origin: left; animation: bfill 1.6s ease-out forwards; }
+  @keyframes bfill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  .bar-pct { font-size: .64rem; font-weight: 700; color: var(--navy); width: 34px; text-align: right; }
+
+  /* ── CTA ── */
+  .cta-dark {
+    background: var(--navy);
+    text-align: center; padding: 110px 52px;
+    position: relative; overflow: hidden;
+    z-index: 5;
+  }
+  .cta-dark::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 55% 70% at 15% 50%, rgba(91,47,255,.18), transparent),
+      radial-gradient(ellipse 55% 70% at 85% 50%, rgba(0,207,255,.12), transparent);
+    pointer-events: none;
+  }
+  .cta-inner { position: relative; z-index: 1; }
+  .cta-eye {
+    font-size: .58rem; letter-spacing: .24em; text-transform: uppercase;
+    color: var(--cyan); font-weight: 700; margin-bottom: 22px; display: block;
+  }
+  .cta-h {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2.6rem, 5vw, 4.2rem); font-weight: 900;
+    color: #fff; line-height: 1.0; letter-spacing: -.03em; margin-bottom: 18px;
+  }
+  .cta-h .outline {
+    -webkit-text-stroke: 1.5px rgba(255,255,255,.35); color: transparent;
+  }
+  .cta-sub {
+    font-size: .76rem; color: rgba(255,255,255,.32); line-height: 1.8;
+    max-width: 440px; margin: 0 auto 40px;
+  }
+  .cta-btns { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+  .btn-grad {
+    display: inline-flex; align-items: center;
+    padding: 14px 38px;
+    font-family: 'Space Mono', monospace; font-size: .65rem; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    color: #fff; text-decoration: none; border: none; cursor: pointer;
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-grad:hover { opacity: .85; transform: translateY(-2px); }
+
+  .btn-outline-w {
+    display: inline-flex; align-items: center;
+    padding: 14px 38px;
+    font-family: 'Space Mono', monospace; font-size: .65rem; font-weight: 700;
+    letter-spacing: .16em; text-transform: uppercase;
+    background: transparent; color: rgba(255,255,255,.5);
+    border: 1.5px solid rgba(255,255,255,.15); text-decoration: none; cursor: pointer;
+    transition: border-color .2s, color .2s;
+  }
+  .btn-outline-w:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ═══════════════════════════════════════════
+     FOOTER
+  ═══════════════════════════════════════════ */
+  footer {
+    position: relative; z-index: 5;
+    background: #060810;
+    padding: 30px 52px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+    border-top: 1px solid rgba(255,255,255,.04);
+  }
+  .f-logo { font-family: 'Syne', sans-serif; font-size: .82rem; font-weight: 900; letter-spacing: .22em; text-transform: uppercase; color: rgba(255,255,255,.4); }
+  .f-logo b { color: #9b78ff; }
+  .f-team { font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: rgba(255,255,255,.22); font-weight: 700; }
+  .f-team strong { color: var(--cyan); }
+  .f-copy { font-size: .56rem; color: rgba(255,255,255,.12); letter-spacing: .08em; }
+
+  /* ═══════════════════════════════════════════
+     SCROLL REVEAL
+  ═══════════════════════════════════════════ */
+  .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s ease; }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE
+  ═══════════════════════════════════════════ */
+  @media (max-width: 1024px) {
+    .modes-grid { grid-template-columns: 1fr 1fr; }
+    .radial-wrap { width: 340px; height: 340px; }
+  }
+  @media (max-width: 768px) {
+    nav { padding: 14px 20px; }
+    #hero { padding: 110px 24px 70px; }
+    .section { padding: 72px 24px; }
+    .cta-dark { padding: 80px 24px; }
+    footer { padding: 24px; flex-direction: column; text-align: center; }
+    .about-grid { grid-template-columns: 1fr; }
+    .modes-grid { grid-template-columns: 1fr; }
+    .radial-wrap { width: 220px; height: 220px; opacity: .08; }
+    .nav-links { display: none; }
+    .hero-name { font-size: clamp(4rem,18vw,7rem); }
+    .cl-tr, .cl-br { display: none; }
+  }
+  </style>
+</head>
+<body>
+
+<!-- BACKGROUND LAYERS -->
+<div class="bg-grid"></div>
+<div id="pts"></div>
+<div class="top-rule"></div>
+<div class="left-rule"></div>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="/landing">PRATYAKSHA<b>.AI</b></a>
+  <ul class="nav-links">
+    <li><a href="#modes">Detection</a></li>
+    <li><a href="#arch">Architecture</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="/home" style="color:var(--purple)">Launch App ↗</a></li>
+  </ul>
+</nav>
+
+<!-- ══════════════ HERO ══════════════ -->
+<section id="hero">
+  <div class="scanline"></div>
+
+  <!-- Spinning radial wheel — right side -->
+  <div class="radial-wrap" aria-hidden="true">
+    <svg class="radial-outer" viewBox="0 0 500 500" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- outer rings -->
+      <circle cx="250" cy="250" r="248" stroke="#5b2fff" stroke-width="1"/>
+      <circle cx="250" cy="250" r="210" stroke="#5b2fff" stroke-width=".5"/>
+      <circle cx="250" cy="250" r="160" stroke="#00cfff" stroke-width=".5"/>
+      <circle cx="250" cy="250" r="100" stroke="#00cfff" stroke-width=".7"/>
+      <circle cx="250" cy="250" r="50"  stroke="#5b2fff" stroke-width="1"/>
+      <circle cx="250" cy="250" r="6"   fill="#5b2fff"/>
+      <!-- 0° -->  <line x1="250" y1="2"   x2="250" y2="200" stroke="#5b2fff" stroke-width=".7"/>
+                   <line x1="250" y1="300" x2="250" y2="498" stroke="#5b2fff" stroke-width=".7"/>
+      <!-- 15° --> <line x1="314" y1="17"  x2="268" y2="194" stroke="#00cfff" stroke-width=".4"/>
+                   <line x1="186" y1="483" x2="232" y2="306" stroke="#00cfff" stroke-width=".4"/>
+      <!-- 30° --> <line x1="374" y1="62"  x2="287" y2="213" stroke="#5b2fff" stroke-width=".6"/>
+                   <line x1="126" y1="438" x2="213" y2="287" stroke="#5b2fff" stroke-width=".6"/>
+      <!-- 45° --> <line x1="425" y1="75"  x2="321" y2="179" stroke="#00cfff" stroke-width=".4"/>
+                   <line x1="75"  y1="425" x2="179" y2="321" stroke="#00cfff" stroke-width=".4"/>
+      <!-- 60° --> <line x1="463" y1="124" x2="312" y2="211" stroke="#5b2fff" stroke-width=".5"/>
+                   <line x1="37"  y1="376" x2="188" y2="289" stroke="#5b2fff" stroke-width=".5"/>
+      <!-- 75° --> <line x1="484" y1="183" x2="305" y2="240" stroke="#00cfff" stroke-width=".4"/>
+                   <line x1="16"  y1="317" x2="195" y2="260" stroke="#00cfff" stroke-width=".4"/>
+      <!-- 90° --> <line x1="2"   y1="250" x2="200" y2="250" stroke="#5b2fff" stroke-width=".7"/>
+                   <line x1="300" y1="250" x2="498" y2="250" stroke="#5b2fff" stroke-width=".7"/>
+      <!-- 105°--> <line x1="17"  y1="186" x2="194" y2="232" stroke="#00cfff" stroke-width=".4"/>
+                   <line x1="483" y1="314" x2="306" y2="268" stroke="#00cfff" stroke-width=".4"/>
+      <!-- 120°--> <line x1="62"  y1="126" x2="213" y2="213" stroke="#5b2fff" stroke-width=".6"/>
+                   <line x1="438" y1="374" x2="287" y2="287" stroke="#5b2fff" stroke-width=".6"/>
+      <!-- 135°--> <line x1="75"  y1="75"  x2="179" y2="179" stroke="#00cfff" stroke-width=".4"/>
+                   <line x1="425" y1="425" x2="321" y2="321" stroke="#00cfff" stroke-width=".4"/>
+      <!-- 150°--> <line x1="124" y1="37"  x2="211" y2="188" stroke="#5b2fff" stroke-width=".5"/>
+                   <line x1="376" y1="463" x2="289" y2="312" stroke="#5b2fff" stroke-width=".5"/>
+      <!-- 165°--> <line x1="183" y1="16"  x2="240" y2="195" stroke="#00cfff" stroke-width=".4"/>
+                   <line x1="317" y1="484" x2="260" y2="305" stroke="#00cfff" stroke-width=".4"/>
+      <!-- crosshair tick marks -->
+      <circle cx="250" cy="250" r="18" stroke="#00cfff" stroke-width="1" fill="none"/>
+    </svg>
+    <!-- inner counter-spin -->
+    <svg class="radial-inner" viewBox="0 0 500 500" fill="none" style="position:absolute;inset:0;">
+      <circle cx="250" cy="250" r="130" stroke="#5b2fff" stroke-width=".4" stroke-dasharray="4 8"/>
+      <circle cx="250" cy="250" r="80"  stroke="#00cfff" stroke-width=".4" stroke-dasharray="3 6"/>
+    </svg>
+  </div>
+
+  <!-- Corner labels -->
+  <span class="clabel cl-tl">SYS · VER 2.4.1 — ONLINE</span>
+  <span class="clabel cl-tr">ANALYSIS ENGINE · READY</span>
+  <span class="clabel cl-bl">AUDIO · VIDEO · IMAGE · LIVE</span>
+  <span class="clabel cl-br">DEEPFAKE DETECTION · ACTIVE</span>
+
+  <div class="hcontent">
+    <!-- Status -->
+    <div class="status-line">
+      <div class="sdot"></div>
+      <span class="stxt">SYSTEM STATUS: <em>ACTIVE</em></span>
+    </div>
+
+    <!-- Brand name -->
+    <h1 class="hero-name">PRATYAKSHA</h1>
+
+    <!-- Tagline -->
+    <p class="hero-tag">The truth is no longer invisible.</p>
+
+    <!-- CTAs — wired to Flask /home -->
+    <div class="hero-btns">
+      <a href="#arch" class="btn-mono ghost">View Architecture</a>
+      <a href="/home"  class="btn-mono accent"><span>Initiate Analysis →</span></a>
+    </div>
+  </div>
+</section>
+
+<!-- ══ HERO → DARK WAVE ══ -->
+<div class="wave-div">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none" height="60">
+    <path d="M0,0 Q360,60 720,30 Q1080,0 1440,50 L1440,60 L0,60 Z" fill="#0e1024"/>
+  </svg>
+</div>
+
+<!-- ══ TICKER ══ -->
+<div class="ticker-wrap">
+  <div class="ticker-track">
+    <!-- Set 1 -->
+    <div class="tick-item"><span class="tick-v">97%</span><span class="tick-l">Audio Accuracy</span></div>
+    <div class="tick-item"><span class="tick-v">94%</span><span class="tick-l">Video Accuracy</span></div>
+    <div class="tick-item"><span class="tick-v">&lt;1s</span><span class="tick-l">Live Latency</span></div>
+    <div class="tick-item"><span class="tick-v">7K+</span><span class="tick-l">Training Samples</span></div>
+    <div class="tick-item"><span class="tick-v">4</span><span class="tick-l">Modalities</span></div>
+    <div class="tick-item"><span class="tick-v">50/50</span><span class="tick-l">Balanced Dataset</span></div>
+    <div class="tick-item"><span class="tick-v">95%</span><span class="tick-l">F1 Score</span></div>
+    <!-- Set 2 (duplicate for seamless loop) -->
+    <div class="tick-item"><span class="tick-v">97%</span><span class="tick-l">Audio Accuracy</span></div>
+    <div class="tick-item"><span class="tick-v">94%</span><span class="tick-l">Video Accuracy</span></div>
+    <div class="tick-item"><span class="tick-v">&lt;1s</span><span class="tick-l">Live Latency</span></div>
+    <div class="tick-item"><span class="tick-v">7K+</span><span class="tick-l">Training Samples</span></div>
+    <div class="tick-item"><span class="tick-v">4</span><span class="tick-l">Modalities</span></div>
+    <div class="tick-item"><span class="tick-v">50/50</span><span class="tick-l">Balanced Dataset</span></div>
+    <div class="tick-item"><span class="tick-v">95%</span><span class="tick-l">F1 Score</span></div>
+  </div>
+</div>
+
+<!-- ══ DETECTION MODES ══ -->
+<section id="modes" class="section dark">
+  <p class="sec-eyebrow reveal">Detection Modes</p>
+  <h2 class="sec-h reveal">Four Modalities.<br/>One System.</h2>
+  <p class="sec-p reveal">Real audio, live faces, uploaded clips, static images — Pratyaksha AI exposes synthetic media across every channel. Click any mode to start analysis.</p>
+
+  <div class="modes-grid">
+    <div class="mode-card clickable" style="--grad:linear-gradient(90deg,#ff5fa0,#5b2fff)" onclick="window.location.href='/home'">
+      <p class="mc-no">01 / 04</p>
+      <span class="mc-icon">🎙</span>
+      <h3 class="mc-h">Audio Analysis</h3>
+      <p class="mc-p">CNN-BiLSTM extracts MFCC + mel-spectrogram features to detect AI-generated voices and TTS attacks.</p>
+      <span class="mc-tag">CNN-BiLSTM · MFCC</span>
+    </div>
+    <div class="mode-card clickable" style="--grad:linear-gradient(90deg,#5b2fff,#00cfff)" onclick="window.location.href='/home'">
+      <p class="mc-no">02 / 04</p>
+      <span class="mc-icon">📹</span>
+      <h3 class="mc-h">Live Video</h3>
+      <p class="mc-p">Real-time webcam frame capture and MesoNet inference — GAN artefacts detected at sub-second latency.</p>
+      <span class="mc-tag">MesoNet · WebRTC</span>
+    </div>
+    <div class="mode-card clickable" style="--grad:linear-gradient(90deg,#00cfff,#1757ff)" onclick="window.location.href='/home'">
+      <p class="mc-no">03 / 04</p>
+      <span class="mc-icon">🎞</span>
+      <h3 class="mc-h">Static Video</h3>
+      <p class="mc-p">Frame-sampled inference over full video files with per-frame confidence aggregation and final verdict.</p>
+      <span class="mc-tag">MesoNet · Temporal</span>
+    </div>
+    <div class="mode-card clickable" style="--grad:linear-gradient(90deg,#1757ff,#ff5fa0)" onclick="window.location.href='/home'">
+      <p class="mc-no">04 / 04</p>
+      <span class="mc-icon">🖼</span>
+      <h3 class="mc-h">Image Scan</h3>
+      <p class="mc-p">Single-image deepfake detection for GAN / diffusion output — includes saliency heatmap overlay.</p>
+      <span class="mc-tag">MesoNet · Heatmap</span>
+    </div>
+  </div>
+</section>
+
+<!-- dark → light wave -->
+<div style="background:#0e1024;line-height:0;position:relative;z-index:5;">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none" height="60" style="display:block;width:100%;">
+    <path d="M0,60 Q360,0 720,30 Q1080,60 1440,10 L1440,60 Z" fill="#f2f4fc"/>
+  </svg>
+</div>
+
+<!-- ══ ARCHITECTURE ══ -->
+<section id="arch" class="section mid">
+  <p class="sec-eyebrow reveal">Technical Architecture</p>
+  <h2 class="sec-h reveal">Built Layer<br/>by Layer.</h2>
+  <p class="sec-p reveal">Every component purpose-built to surface the artefacts synthetic media leaves behind.</p>
+
+  <table class="arch-table reveal">
+    <thead>
+      <tr>
+        <th>Component</th>
+        <th>Role</th>
+        <th>Input</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>CNN-BiLSTM</td><td>Classifies audio as real or synthesised via temporal sequence modelling on MFCC / mel-spectrogram arrays.</td><td>MP3 · WAV · OGG</td><td><span class="abadge">ACTIVE</span></td></tr>
+      <tr><td>MesoNet</td><td>Mesoscopic spatial analysis of facial regions to surface GAN, face-swap, and diffusion model artefacts.</td><td>Frames · Images</td><td><span class="abadge">ACTIVE</span></td></tr>
+      <tr><td>Feature Pipeline</td><td>Extracts 13-band MFCC, 128-band mel-spectrogram, and delta coefficients from raw audio waveforms.</td><td>Raw Audio</td><td><span class="abadge">ACTIVE</span></td></tr>
+      <tr><td>Flask REST API</td><td>Lightweight Python backend serving model predictions over HTTP with CORS-enabled endpoints.</td><td>Multipart / JSON</td><td><span class="abadge">ACTIVE</span></td></tr>
+      <tr><td>Live Engine</td><td>Frame capture from webcam streamed to inference endpoint in near-real-time for frame-level verdicts.</td><td>WebRTC Frames</td><td><span class="abadge">ACTIVE</span></td></tr>
+      <tr><td>Dataset Corpus</td><td>7,000+ balanced real/fake audio samples spanning diverse speakers, microphones, and TTS engines.</td><td>Training Data</td><td><span class="abadge">v2 FINAL</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ══ ABOUT ══ -->
+<section id="about" class="section light">
+  <div class="about-grid">
+    <div class="about-left reveal">
+      <p class="sec-eyebrow">About the Project</p>
+      <h2 class="sec-h">Truth. Exposed.<br/><span style="color:var(--purple)">Instantly.</span></h2>
+      <p>"Pratyaksha" (प्रत्यक्ष) means <em>direct perception</em> in Sanskrit — manifest, self-evident truth. In an era of generative AI and synthetic media, that truth needs defending.</p>
+      <p>Our system runs entirely on-device. No cloud upload. No account. Just raw detection power built from the ground up — custom training pipeline, balanced dataset, and a dual-model architecture.</p>
+      <p>Built for a generation that refuses to be deceived.</p>
+    </div>
+    <div class="reveal">
+      <div class="bars">
+        <div class="bar-row"><span class="bar-lbl">Audio Acc.</span><div class="bar-track"><div class="bar-fill" style="width:97%"></div></div><span class="bar-pct">97%</span></div>
+        <div class="bar-row"><span class="bar-lbl">Video Acc.</span><div class="bar-track"><div class="bar-fill" style="width:94%"></div></div><span class="bar-pct">94%</span></div>
+        <div class="bar-row"><span class="bar-lbl">Precision</span><div class="bar-track"><div class="bar-fill" style="width:95%"></div></div><span class="bar-pct">95%</span></div>
+        <div class="bar-row"><span class="bar-lbl">Recall</span>   <div class="bar-track"><div class="bar-fill" style="width:96%"></div></div><span class="bar-pct">96%</span></div>
+        <div class="bar-row"><span class="bar-lbl">F1 Score</span> <div class="bar-track"><div class="bar-fill" style="width:95%"></div></div><span class="bar-pct">95%</span></div>
+        <div class="bar-row"><span class="bar-lbl">Specificity</span><div class="bar-track"><div class="bar-fill" style="width:93%"></div></div><span class="bar-pct">93%</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══ CTA ══ -->
+<section id="cta" class="cta-dark">
+  <div class="cta-inner">
+    <span class="cta-eye">// System Ready · Awaiting Input</span>
+    <h2 class="cta-h">Verify the<br/><span class="outline">Truth Now.</span></h2>
+    <p class="cta-sub">Upload audio, an image, or a video clip — or go live with your webcam. No account, no cloud, no compromise.</p>
+    <div class="cta-btns">
+      <a href="/home" class="btn-grad">Initiate Analysis</a>
+      <a href="#arch"  class="btn-outline-w">View Architecture</a>
+    </div>
+  </div>
+</section>
+
+<!-- ══ FOOTER ══ -->
+<footer>
+  <div class="f-logo">PRATYAKSHA<b>.AI</b></div>
+  <div class="f-team">Built with ❤️ by <strong>Team Win Diesel</strong> · VNR Hackathon 2025</div>
+  <div class="f-copy">© 2025 · All Rights Reserved</div>
+</footer>
+
+<!-- ══ SCRIPT ══ -->
+<script>
+  // Particles
+  const arena = document.getElementById('pts');
+  const COLORS = ['#5b2fff','#00cfff','#1757ff','#9b78ff','#7feeff'];
+  for (let i = 0; i < 90; i++) {
+    const el = document.createElement('div');
+    el.className = 'pt';
+    const s = 3 + Math.random() * 5;
+    Object.assign(el.style, {
+      left:   (Math.random() * 100) + 'vw',
+      top:    (Math.random() * 100) + 'vh',
+      width:  s + 'px', height: s + 'px',
+      background: COLORS[Math.floor(Math.random() * COLORS.length)],
+      opacity: (.18 + Math.random() * .45),
+      animationDuration: (3 + Math.random() * 6) + 's',
+      animationDelay:    (Math.random() * 5) + 's',
+    });
+    arena.appendChild(el);
+  }
+
+  // Scroll reveal
+  const ro = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); ro.unobserve(e.target); } });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => ro.observe(el));
+</script>
+</body>
+</html>

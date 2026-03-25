@@ -327,6 +327,8 @@
             </div>
 
             <div class="flex items-center gap-3">
+                <a href="/landing" class="px-3 py-1.5 rounded-full border border-gray-600/40 bg-white/5 flex items-center gap-2 text-xs font-mono text-gray-400 hover:text-white hover:border-primary/40 transition-all no-underline"
+                   style="text-decoration:none">← Landing</a>
                 <div class="px-3 py-1.5 rounded-full border border-accent/30 bg-accent/10 flex items-center gap-2">
                     <div class="w-2 h-2 rounded-full bg-accent animate-pulse"></div>
                     <span class="text-xs font-mono text-accent">SYSTEM ACTIVE</span>
@@ -1019,37 +1021,38 @@
             formData.append('file', file);
 
             try {
-                // Bypass backend for Vercel static deployment
-                // const response = await fetch('/protect', { method: 'POST', body: formData });
-                // const responseText = await response.text();
-                // let data = JSON.parse(responseText);
+                // Call the real /protect backend endpoint
+                const response = await fetch('/protect', { method: 'POST', body: formData });
+                const data = await response.json();
 
-                // Fake a successful anchoring for demo
-                const fakeUrl = URL.createObjectURL(file);
+                // Reset UI
+                document.getElementById('protect-loading-state').classList.add('hidden');
+                document.getElementById('protect-initial').classList.remove('hidden');
+                document.getElementById('protect-initial').style.opacity = '1';
+                document.getElementById('protect-scanner').style.display = 'none';
 
-                setTimeout(() => {
-                    // Reset UI
-                    document.getElementById('protect-loading-state').classList.add('hidden');
-                    document.getElementById('protect-initial').classList.remove('hidden');
-                    document.getElementById('protect-initial').style.opacity = '1';
-                    document.getElementById('protect-scanner').style.display = 'none';
+                if (data.error) {
+                    alert('Anchoring Failed: ' + data.error);
+                    return;
+                }
 
-                    // Show result
-                    document.getElementById('protect-empty').classList.add('hidden');
-                    document.getElementById('protect-result-content').classList.remove('hidden');
+                // Show result with real protected image from backend
+                document.getElementById('protect-empty').classList.add('hidden');
+                document.getElementById('protect-result-content').classList.remove('hidden');
 
-                    if (file.type.startsWith('video/')) {
-                        document.getElementById('protected-image-preview').style.display = 'none';
-                    } else {
-                        document.getElementById('protected-image-preview').style.display = 'block';
-                        document.getElementById('protected-image-preview').src = fakeUrl;
-                    }
-                    document.getElementById('download-link').href = fakeUrl;
-                }, 1500);
+                if (file.type.startsWith('video/')) {
+                    document.getElementById('protected-image-preview').style.display = 'none';
+                } else {
+                    document.getElementById('protected-image-preview').style.display = 'block';
+                    document.getElementById('protected-image-preview').src = data.protected_url;
+                }
+                // Make download link point to server-processed file
+                document.getElementById('download-link').href = data.protected_url;
+                document.getElementById('download-link').download = 'pratyaksha_protected_' + file.name;
 
             } catch (err) {
                 console.error(err);
-                alert("Anchoring Failed: " + err.message);
+                alert('Anchoring Failed: ' + err.message);
                 document.getElementById('protect-loading-state').classList.add('hidden');
                 document.getElementById('protect-initial').classList.remove('hidden');
                 document.getElementById('protect-initial').style.opacity = '1';

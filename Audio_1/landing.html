@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Pratyaksha AI — Real-time deepfake detection for audio, live video, static video, and images. Powered by cutting-edge AI to protect truth." />
+  <title>Pratyaksha AI — Detect the Undetectable</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ─────────────────── DESIGN TOKENS ─────────────────── */
+    :root {
+      --white:        #ffffff;
+      --off-white:    #f8f9ff;
+      --surface:      #f0f4ff;
+      --purple:       #6c63ff;
+      --purple-light: #a99eff;
+      --purple-dark:  #4c44d4;
+      --teal:         #0fcfb8;
+      --teal-light:   #7ffce9;
+      --coral:        #ff6b6b;
+      --amber:        #ffb347;
+      --navy:         #1a1a3e;
+      --text:         #1e1e3a;
+      --muted:        #6b7299;
+      --border:       rgba(108,99,255,.15);
+      --shadow-sm:    0 4px 20px rgba(108,99,255,.08);
+      --shadow-md:    0 12px 40px rgba(108,99,255,.14);
+      --shadow-lg:    0 24px 64px rgba(108,99,255,.18);
+      --radius:       18px;
+      --radius-sm:    10px;
+    }
+
+    /* ─────────────────── RESET & BASE ─────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--white);
+      color: var(--text);
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    /* ─────────────────── SCROLLBAR ─────────────────── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--surface); }
+    ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 99px; }
+
+    /* ─────────────────── UTILITY ─────────────────── */
+    .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+    .gradient-text {
+      background: linear-gradient(135deg, var(--purple) 0%, var(--teal) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: linear-gradient(135deg, rgba(108,99,255,.1), rgba(15,207,184,.1));
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-size: .78rem; font-weight: 600; letter-spacing: .06em;
+      color: var(--purple);
+      text-transform: uppercase;
+    }
+    .badge::before { content: "●"; font-size: .55rem; color: var(--teal); animation: pulse 1.8s ease-in-out infinite; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: .4; transform: scale(1.4); }
+    }
+
+    /* ─────────────────── NAV ─────────────────── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      background: rgba(255,255,255,.82);
+      backdrop-filter: blur(20px) saturate(1.4);
+      -webkit-backdrop-filter: blur(20px) saturate(1.4);
+      border-bottom: 1px solid var(--border);
+      transition: box-shadow .3s;
+    }
+    nav.scrolled { box-shadow: var(--shadow-sm); }
+
+    .nav-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      height: 68px;
+    }
+    .nav-logo {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none;
+    }
+    .nav-logo .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      border-radius: 10px;
+      display: grid; place-items: center;
+      font-size: 1.2rem;
+      box-shadow: 0 4px 14px rgba(108,99,255,.35);
+      animation: logoFloat 3s ease-in-out infinite;
+    }
+    @keyframes logoFloat {
+      0%, 100% { transform: translateY(0); }
+      50%       { transform: translateY(-3px); }
+    }
+    .nav-logo span {
+      font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 32px;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none; color: var(--muted); font-size: .9rem; font-weight: 500;
+      transition: color .2s;
+      position: relative;
+    }
+    .nav-links a::after {
+      content: ''; position: absolute; bottom: -3px; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--purple), var(--teal));
+      border-radius: 99px;
+      transform: scaleX(0); transition: transform .25s ease;
+    }
+    .nav-links a:hover { color: var(--purple); }
+    .nav-links a:hover::after { transform: scaleX(1); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      color: #fff; border: none;
+      padding: 10px 24px; border-radius: 99px;
+      font-size: .88rem; font-weight: 600; cursor: pointer;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      box-shadow: 0 4px 18px rgba(108,99,255,.3);
+      transition: box-shadow .25s, transform .25s;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 28px rgba(108,99,255,.42);
+    }
+
+    /* ─────────────────── HERO ─────────────────── */
+    #hero {
+      padding: 148px 0 100px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative blobs */
+    .blob {
+      position: absolute; border-radius: 50%; filter: blur(90px);
+      pointer-events: none; z-index: 0;
+    }
+    .blob-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(108,99,255,.15) 0%, transparent 70%);
+      top: -150px; right: -120px;
+      animation: blobMove 8s ease-in-out infinite alternate;
+    }
+    .blob-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(15,207,184,.12) 0%, transparent 70%);
+      bottom: -100px; left: -80px;
+      animation: blobMove 10s ease-in-out infinite alternate-reverse;
+    }
+    .blob-3 {
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(255,107,107,.1) 0%, transparent 70%);
+      top: 50%; left: 40%;
+      animation: blobMove 12s ease-in-out infinite alternate;
+    }
+    @keyframes blobMove {
+      from { transform: translate(0,0) scale(1); }
+      to   { transform: translate(30px,20px) scale(1.06); }
+    }
+
+    .hero-content {
+      position: relative; z-index: 1;
+      display: grid; grid-template-columns: 1fr 1fr;
+      align-items: center; gap: 60px;
+    }
+    .hero-left { display: flex; flex-direction: column; gap: 24px; }
+    .hero-left h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(2.6rem, 5vw, 4rem);
+      font-weight: 800; line-height: 1.12;
+      color: var(--navy);
+    }
+    .hero-left p {
+      font-size: 1.08rem; color: var(--muted); max-width: 480px; line-height: 1.75;
+    }
+    .hero-cta { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+
+    .btn-outline {
+      padding: 10px 24px; border-radius: 99px;
+      border: 1.5px solid var(--border);
+      color: var(--purple); font-size: .88rem; font-weight: 600;
+      text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+      transition: background .2s, border-color .2s;
+    }
+    .btn-outline:hover { background: rgba(108,99,255,.06); border-color: var(--purple); }
+
+    .hero-stats {
+      display: flex; gap: 32px; flex-wrap: wrap; margin-top: 8px;
+    }
+    .hero-stat { display: flex; flex-direction: column; }
+    .hero-stat .val {
+      font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+    .hero-stat .lbl { font-size: .78rem; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* Hero visual — animated scan card */
+    .hero-right { display: flex; justify-content: center; }
+    .scan-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 32px;
+      box-shadow: var(--shadow-lg);
+      width: 100%; max-width: 420px;
+      position: relative;
+      animation: cardFloat 4s ease-in-out infinite;
+    }
+    @keyframes cardFloat {
+      0%,100% { transform: translateY(0) rotate(0deg); }
+      50%      { transform: translateY(-10px) rotate(.4deg); }
+    }
+    .scan-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+    }
+    .scan-header .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .scan-header .dot-r { background: #ff6b6b; }
+    .scan-header .dot-y { background: #ffb347; }
+    .scan-header .dot-g { background: var(--teal); }
+    .scan-header .title { margin-left: auto; font-size: .8rem; color: var(--muted); font-weight: 500; }
+
+    .scan-preview {
+      width: 100%; height: 180px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--surface) 0%, rgba(108,99,255,.08) 100%);
+      position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .scan-face {
+      width: 90px; height: 90px; border-radius: 50%;
+      background: linear-gradient(135deg, rgba(108,99,255,.2), rgba(15,207,184,.2));
+      border: 2px dashed var(--purple-light);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.4rem;
+    }
+    .scan-line {
+      position: absolute; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--teal), transparent);
+      top: 0; animation: scanMove 2.2s ease-in-out infinite;
+    }
+    @keyframes scanMove {
+      0%   { top: 0%; opacity: .8; }
+      100% { top: 100%; opacity: 0; }
+    }
+
+    .scan-result {
+      margin-top: 18px; display: flex; flex-direction: column; gap: 10px;
+    }
+    .scan-bar-label {
+      display: flex; justify-content: space-between;
+      font-size: .78rem; font-weight: 600; color: var(--text);
+    }
+    .bar-track {
+      height: 8px; background: var(--surface); border-radius: 99px; overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 99px;
+      animation: fillAnim 2.4s ease-in-out infinite alternate;
+    }
+    .bar-fill.authentic { background: linear-gradient(90deg, var(--teal), #00e5cc); width: 82%; }
+    .bar-fill.deepfake  { background: linear-gradient(90deg, var(--coral), #ff9a8b); width: 18%; }
+
+    @keyframes fillAnim {
+      0%   { opacity: .7; }
+      100% { opacity: 1; }
+    }
+
+    .verdict {
+      margin-top: 14px; padding: 10px 16px; border-radius: 10px;
+      background: linear-gradient(135deg, rgba(15,207,184,.1), rgba(108,99,255,.08));
+      border: 1px solid rgba(15,207,184,.25);
+      display: flex; align-items: center; gap: 8px;
+      font-size: .85rem; font-weight: 600; color: #0b9d8a;
+    }
+    .verdict .icon { font-size: 1.1rem; }
+
+    /* Floating badges on card */
+    .float-badge {
+      position: absolute;
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 14px;
+      font-size: .73rem; font-weight: 600;
+      box-shadow: var(--shadow-sm);
+      display: flex; align-items: center; gap: 6px;
+      animation: floatBadge 3s ease-in-out infinite;
+    }
+    .float-badge.pos-a { top: -16px; right: 20px; animation-delay: 0s; }
+    .float-badge.pos-b { bottom: 60px; left: -20px; animation-delay: 1s; }
+    .float-badge.pos-c { bottom: -16px; right: 40px; animation-delay: 2s; }
+    @keyframes floatBadge {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-6px); }
+    }
+
+    /* ─────────────────── SECTION COMMONS ─────────────────── */
+    section { padding: 96px 0; }
+    .section-label { display: flex; justify-content: center; margin-bottom: 18px; }
+    .section-heading {
+      text-align: center; margin-bottom: 16px;
+      font-family: 'Syne', sans-serif; font-size: clamp(1.8rem,3.5vw,2.6rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2;
+    }
+    .section-sub {
+      text-align: center; color: var(--muted); max-width: 580px;
+      margin: 0 auto 56px; font-size: 1rem; line-height: 1.75;
+    }
+
+    /* ─────────────────── HOW IT WORKS ─────────────────── */
+    #how { background: var(--off-white); }
+
+    .steps {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
+    }
+    .step-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 24px;
+      text-align: center;
+      transition: transform .3s, box-shadow .3s;
+      position: relative; overflow: hidden;
+    }
+    .step-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(108,99,255,.04), rgba(15,207,184,.04));
+      opacity: 0; transition: opacity .3s;
+    }
+    .step-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); }
+    .step-card:hover::before { opacity: 1; }
+
+    .step-num {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      color: #fff; font-size: .85rem; font-weight: 700;
+      display: grid; place-items: center; margin: 0 auto 18px;
+    }
+    .step-icon { font-size: 2.4rem; margin-bottom: 12px; }
+    .step-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 8px; color: var(--navy); }
+    .step-card p { font-size: .86rem; color: var(--muted); line-height: 1.6; }
+
+    /* ─────────────────── DETECTION MODES ─────────────────── */
+    #detect { background: var(--white); }
+
+    .modes-grid {
+      display: grid; grid-template-columns: repeat(2,1fr); gap: 28px;
+    }
+    .mode-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      display: flex; gap: 24px; align-items: flex-start;
+      box-shadow: var(--shadow-sm);
+      transition: transform .3s, box-shadow .3s, border-color .3s;
+      position: relative; overflow: hidden;
+    }
+    .mode-card::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 3px;
+      background: var(--accent-grad, linear-gradient(90deg, var(--purple), var(--teal)));
+      transform: scaleX(0); transform-origin: left;
+      transition: transform .4s ease;
+    }
+    .mode-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); border-color: rgba(108,99,255,.25); }
+    .mode-card:hover::after { transform: scaleX(1); }
+
+    .mode-icon-wrap {
+      width: 60px; height: 60px; border-radius: 14px; flex-shrink: 0;
+      display: grid; place-items: center; font-size: 1.7rem;
+    }
+    .mode-card.audio    .mode-icon-wrap { background: rgba(255,107,107,.1); }
+    .mode-card.live     .mode-icon-wrap { background: rgba(108,99,255,.1); }
+    .mode-card.video    .mode-icon-wrap { background: rgba(15,207,184,.1); }
+    .mode-card.image    .mode-icon-wrap { background: rgba(255,179,71,.1); }
+
+    .mode-body h3 { font-size: 1.1rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+    .mode-body p  { font-size: .88rem; color: var(--muted); line-height: 1.65; margin-bottom: 14px; }
+    .mode-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      font-size: .72rem; font-weight: 600; padding: 4px 10px; border-radius: 6px;
+      background: var(--surface); color: var(--purple); text-transform: uppercase; letter-spacing: .04em;
+    }
+
+    /* ─────────────────── TECH STACK / ARCHITECTURE ─────────────────── */
+    #tech { background: var(--off-white); }
+
+    .arch-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 24px;
+    }
+    .arch-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 28px 24px;
+      text-align: center; transition: transform .3s, box-shadow .3s;
+    }
+    .arch-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); }
+    .arch-icon { font-size: 2.2rem; margin-bottom: 14px; }
+    .arch-card h3 { font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+    .arch-card p  { font-size: .83rem; color: var(--muted); line-height: 1.6; }
+
+    /* ─────────────────── ACCURACY SECTION ─────────────────── */
+    #accuracy { background: var(--white); }
+
+    .metrics-row {
+      display: grid; grid-template-columns: repeat(4,1fr); gap: 24px;
+      margin-bottom: 60px;
+    }
+    .metric-card {
+      background: linear-gradient(135deg, var(--white), var(--surface));
+      border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 32px 24px; text-align: center;
+      box-shadow: var(--shadow-sm);
+      transition: transform .3s;
+    }
+    .metric-card:hover { transform: translateY(-4px); }
+    .metric-val {
+      font-family: 'Syne', sans-serif; font-size: 2.4rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--purple), var(--teal));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 6px;
+    }
+    .metric-lbl { font-size: .8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .05em; }
+
+    /* Counter animation hook */
+    .counter { display: inline-block; }
+
+    /* ─────────────────── TIMELINE ─────────────────── */
+    .timeline {
+      position: relative; padding-left: 40px; display: flex; flex-direction: column; gap: 28px;
+    }
+    .timeline::before {
+      content: ''; position: absolute; left: 15px; top: 8px; bottom: 8px;
+      width: 2px; background: linear-gradient(180deg, var(--purple), var(--teal));
+      border-radius: 99px;
+    }
+    .tl-item { position: relative; }
+    .tl-item::before {
+      content: ''; position: absolute; left: -32px; top: 6px;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: var(--white); border: 3px solid var(--purple);
+      box-shadow: 0 0 0 4px rgba(108,99,255,.15);
+    }
+    .tl-item h4 { font-size: .95rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .tl-item p  { font-size: .84rem; color: var(--muted); line-height: 1.6; }
+
+    /* ─────────────────── ABOUT SECTION ─────────────────── */
+    #about { background: var(--off-white); }
+
+    .about-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center;
+    }
+    .about-left h2 {
+      font-family: 'Syne', sans-serif; font-size: clamp(1.7rem,3vw,2.2rem); font-weight: 800;
+      color: var(--navy); line-height: 1.2; margin-bottom: 20px;
+    }
+    .about-left p { font-size: .95rem; color: var(--muted); line-height: 1.8; margin-bottom: 16px; }
+
+    .about-right {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+    }
+    .feature-mini {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 22px 18px;
+      transition: transform .25s, box-shadow .25s;
+    }
+    .feature-mini:hover { transform: translateY(-4px); box-shadow: var(--shadow-sm); }
+    .feature-mini .fi { font-size: 1.6rem; margin-bottom: 10px; }
+    .feature-mini h4 { font-size: .88rem; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+    .feature-mini p  { font-size: .77rem; color: var(--muted); line-height: 1.5; }
+
+    /* ─────────────────── TEAM / FOOTER ─────────────────── */
+    footer {
+      background: var(--navy);
+      color: rgba(255,255,255,.75);
+      padding: 60px 0 32px;
+    }
+    .footer-inner {
+      display: grid; grid-template-columns: 1.4fr 1fr 1fr;
+      gap: 48px; padding-bottom: 48px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+    }
+    .footer-brand .logo-text {
+      font-family: 'Syne', sans-serif; font-size: 1.5rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 12px; display: block;
+    }
+    .footer-brand p { font-size: .86rem; line-height: 1.7; max-width: 260px; }
+
+    .footer-col h5 {
+      font-size: .78rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: rgba(255,255,255,.5);
+      margin-bottom: 18px;
+    }
+    .footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .footer-col ul a { color: rgba(255,255,255,.7); text-decoration: none; font-size: .88rem; transition: color .2s; }
+    .footer-col ul a:hover { color: var(--teal-light); }
+
+    .footer-bottom {
+      padding-top: 28px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      text-align: center;
+    }
+    .footer-bottom .team-line {
+      font-size: .95rem; color: rgba(255,255,255,.55);
+    }
+    .footer-bottom .team-line strong {
+      color: var(--teal-light); font-weight: 700;
+    }
+    .footer-bottom .copy {
+      font-size: .78rem; color: rgba(255,255,255,.3);
+    }
+    .footer-tagline {
+      font-family: 'Syne', sans-serif; font-size: 1rem; font-weight: 700;
+      background: linear-gradient(135deg, var(--purple-light), var(--teal-light));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    /* ─────────────────── RESPONSIVE ─────────────────── */
+    @media (max-width: 960px) {
+      .hero-content { grid-template-columns: 1fr; }
+      .hero-right    { display: none; }
+      .modes-grid    { grid-template-columns: 1fr; }
+      .steps         { grid-template-columns: 1fr 1fr; }
+      .arch-grid     { grid-template-columns: 1fr 1fr; }
+      .metrics-row   { grid-template-columns: 1fr 1fr; }
+      .about-grid    { grid-template-columns: 1fr; }
+      .footer-inner  { grid-template-columns: 1fr; gap: 32px; }
+    }
+    @media (max-width: 600px) {
+      .steps       { grid-template-columns: 1fr; }
+      .arch-grid   { grid-template-columns: 1fr; }
+      .metrics-row { grid-template-columns: 1fr 1fr; }
+      .about-right { grid-template-columns: 1fr; }
+      .nav-links   { display: none; }
+    }
+
+    /* ─────────────────── ANIMATIONS ─────────────────── */
+    .fade-up {
+      opacity: 0; transform: translateY(28px);
+      transition: opacity .65s cubic-bezier(.25,.8,.25,1), transform .65s cubic-bezier(.25,.8,.25,1);
+    }
+    .fade-up.visible { opacity: 1; transform: none; }
+
+    /* Stagger helper */
+    .fade-up:nth-child(2) { transition-delay: .08s; }
+    .fade-up:nth-child(3) { transition-delay: .16s; }
+    .fade-up:nth-child(4) { transition-delay: .24s; }
+    .fade-up:nth-child(5) { transition-delay: .32s; }
+    .fade-up:nth-child(6) { transition-delay: .40s; }
+
+    /* ─────────────────── WAVE DIVIDER ─────────────────── */
+    .wave {
+      display: block; width: 100%; overflow: hidden; line-height: 0;
+    }
+    .wave svg { display: block; }
+
+    /* ─────────────────── HIGHLIGHT PILL ─────────────────── */
+    .pill-row {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 48px;
+    }
+    .pill {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 99px; padding: 8px 18px;
+      font-size: .82rem; font-weight: 600; color: var(--text);
+    }
+    .pill .emoji { font-size: 1rem; }
+
+    /* ─────────────────── CTA SECTION ─────────────────── */
+    #cta {
+      background: linear-gradient(135deg, var(--purple) 0%, #8a84ff 50%, var(--teal) 100%);
+      padding: 100px 0; text-align: center; position: relative; overflow: hidden;
+    }
+    #cta::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+    }
+    #cta h2 {
+      font-family: 'Syne', sans-serif; font-size: clamp(2rem,4vw,3rem); font-weight: 800;
+      color: #fff; margin-bottom: 16px; position: relative; z-index: 1;
+    }
+    #cta p { color: rgba(255,255,255,.8); font-size: 1.05rem; max-width: 480px; margin: 0 auto 36px; position: relative; z-index: 1; }
+    .btn-white {
+      background: #fff; color: var(--purple);
+      font-weight: 700; padding: 14px 36px;
+      border-radius: 99px; text-decoration: none; font-size: 1rem;
+      display: inline-flex; align-items: center; gap: 10px;
+      box-shadow: 0 8px 28px rgba(0,0,0,.15);
+      transition: transform .25s, box-shadow .25s;
+      position: relative; z-index: 1;
+    }
+    .btn-white:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(0,0,0,.22); }
+  </style>
+</head>
+<body>
+
+  <!-- ══════════════════════ NAV ══════════════════════ -->
+  <nav id="nav">
+    <div class="container nav-inner">
+      <a href="#" class="nav-logo">
+        <div class="logo-icon">🔍</div>
+        <span>Pratyaksha AI</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#how">How It Works</a></li>
+        <li><a href="#detect">Detection</a></li>
+        <li><a href="#tech">Technology</a></li>
+        <li><a href="#accuracy">Accuracy</a></li>
+        <li><a href="#about">About</a></li>
+      </ul>
+      <a href="#detect" class="btn-primary">Try Detection →</a>
+    </div>
+  </nav>
+
+  <!-- ══════════════════════ HERO ══════════════════════ -->
+  <section id="hero">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+
+    <div class="container">
+      <div class="hero-content">
+        <!-- Left -->
+        <div class="hero-left">
+          <div class="badge">🛡 Real-Time Deepfake Detection</div>
+
+          <h1>
+            Exposing the Fake<br />
+            <span class="gradient-text">Before It Spreads.</span>
+          </h1>
+
+          <p>
+            Pratyaksha AI is an end-to-end deepfake detection platform powered by
+            BiLSTM + MesoNet that analyses <strong>audio</strong>, <strong>live video</strong>,
+            <strong>static video</strong>, and <strong>images</strong> — in real time,
+            with unmatched accuracy.
+          </p>
+
+          <div class="hero-cta">
+            <a href="#detect" class="btn-primary">🚀 Start Detection</a>
+            <a href="#how" class="btn-outline">Learn How →</a>
+          </div>
+
+          <div class="hero-stats">
+            <div class="hero-stat">
+              <span class="val" id="c1">97%</span>
+              <span class="lbl">Detection Accuracy</span>
+            </div>
+            <div class="hero-stat">
+              <span class="val" id="c2">&lt; 1s</span>
+              <span class="lbl">Live Latency</span>
+            </div>
+            <div class="hero-stat">
+              <span class="val" id="c3">4</span>
+              <span class="lbl">Media Modalities</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right — Scan Card -->
+        <div class="hero-right">
+          <div class="scan-card">
+            <!-- Floating badges -->
+            <div class="float-badge pos-a">🎙 Audio OK</div>
+            <div class="float-badge pos-b">📹 Live Scan</div>
+            <div class="float-badge pos-c">✅ Verified</div>
+
+            <div class="scan-header">
+              <span class="dot dot-r"></span>
+              <span class="dot dot-y"></span>
+              <span class="dot dot-g"></span>
+              <span class="title">Pratyaksha Scan · Live</span>
+            </div>
+
+            <div class="scan-preview">
+              <div class="scan-face">🧑</div>
+              <div class="scan-line"></div>
+            </div>
+
+            <div class="scan-result">
+              <div class="scan-bar-label"><span>Authentic</span><span>82%</span></div>
+              <div class="bar-track"><div class="bar-fill authentic"></div></div>
+
+              <div class="scan-bar-label"><span>Deepfake</span><span>18%</span></div>
+              <div class="bar-track"><div class="bar-fill deepfake"></div></div>
+            </div>
+
+            <div class="verdict">
+              <span class="icon">✅</span>
+              Verdict: <strong>Authentic Content Detected</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave transition -->
+  <div class="wave" style="background:#fff;">
+    <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#f8f9ff" d="M0,30 C360,70 1080,-10 1440,30 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
+
+  <!-- ══════════════════════ HOW IT WORKS ══════════════════════ -->
+  <section id="how">
+    <div class="container">
+      <div class="section-label"><span class="badge">⚙ How It Works</span></div>
+      <h2 class="section-heading">Detection in <span class="gradient-text">Four Simple Steps</span></h2>
+      <p class="section-sub">Our multi-modal pipeline processes your media through a layered AI stack, surfacing tampered content with surgical precision.</p>
+
+      <div class="steps">
+        <div class="step-card fade-up">
+          <div class="step-num">1</div>
+          <div class="step-icon">📤</div>
+          <h3>Upload or Stream</h3>
+          <p>Drop an audio file, image, or video — or connect your webcam for live analysis.</p>
+        </div>
+        <div class="step-card fade-up">
+          <div class="step-num">2</div>
+          <div class="step-icon">🧠</div>
+          <h3>AI Feature Extraction</h3>
+          <p>MFCCs, mel-spectrograms, and facial artefact maps are extracted from the raw media.</p>
+        </div>
+        <div class="step-card fade-up">
+          <div class="step-num">3</div>
+          <div class="step-icon">🔬</div>
+          <h3>Deep Model Inference</h3>
+          <p>CNN-BiLSTM (audio) &amp; MesoNet (video/image) analyse temporal &amp; spatial patterns.</p>
+        </div>
+        <div class="step-card fade-up">
+          <div class="step-num">4</div>
+          <div class="step-icon">📊</div>
+          <h3>Verdict &amp; Report</h3>
+          <p>Get a confidence score, probability breakdown, and a tampered-region heatmap.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave transition -->
+  <div class="wave" style="background:#f8f9ff;">
+    <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#ffffff" d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
+
+  <!-- ══════════════════════ DETECTION MODES ══════════════════════ -->
+  <section id="detect">
+    <div class="container">
+      <div class="section-label"><span class="badge">🎯 Detection Modes</span></div>
+      <h2 class="section-heading">Four Modalities. <span class="gradient-text">One Platform.</span></h2>
+      <p class="section-sub">Whether it's a forged voice, a face-swapped clip, or a manipulated image — Pratyaksha AI catches it all.</p>
+
+      <div class="modes-grid">
+
+        <!-- Audio -->
+        <div class="mode-card audio fade-up">
+          <div class="mode-icon-wrap">🎙</div>
+          <div class="mode-body">
+            <h3>Audio Deepfake Detection</h3>
+            <p>Upload any audio clip and our CNN-BiLSTM model trained on 7,000+ samples extracts MFCC + mel-spectrogram features to classify it as real or synthetically generated.</p>
+            <div class="mode-tags">
+              <span class="tag">CNN-BiLSTM</span>
+              <span class="tag">MFCC</span>
+              <span class="tag">Mel-Spectrogram</span>
+              <span class="tag">MP3/WAV/OGG</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Live Video -->
+        <div class="mode-card live fade-up">
+          <div class="mode-icon-wrap">📹</div>
+          <div class="mode-body">
+            <h3>Live Video Detection</h3>
+            <p>Stream your webcam feed in real time. Our frame-level MesoNet picks up GAN artefacts, mesoscopic inconsistencies, and texture anomalies with sub-second latency.</p>
+            <div class="mode-tags">
+              <span class="tag">MesoNet</span>
+              <span class="tag">Real-Time</span>
+              <span class="tag">WebRTC</span>
+              <span class="tag">Frame-Level</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Static Video -->
+        <div class="mode-card video fade-up">
+          <div class="mode-icon-wrap">🎞</div>
+          <div class="mode-body">
+            <h3>Static Video Detection</h3>
+            <p>Upload pre-recorded videos (MP4, AVI, MOV). Pratyaksha samples key frames, runs per-frame inference, and aggregates confidence scores for a whole-video verdict.</p>
+            <div class="mode-tags">
+              <span class="tag">MesoNet</span>
+              <span class="tag">Temporal Analysis</span>
+              <span class="tag">MP4/AVI/MOV</span>
+              <span class="tag">Heatmap</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Images -->
+        <div class="mode-card image fade-up">
+          <div class="mode-icon-wrap">🖼</div>
+          <div class="mode-body">
+            <h3>Image Deepfake Detection</h3>
+            <p>Analyse single-image deepfakes produced by GAN, diffusion, or face-swap pipelines. Our model highlights the tampered region with a saliency heatmap overlay.</p>
+            <div class="mode-tags">
+              <span class="tag">MesoNet</span>
+              <span class="tag">GAN Detection</span>
+              <span class="tag">Diffusion</span>
+              <span class="tag">JPG/PNG/WEBP</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave -->
+  <div class="wave" style="background:#fff;">
+    <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#f8f9ff" d="M0,20 C480,70 960,-10 1440,30 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
+
+  <!-- ══════════════════════ TECHNOLOGY ══════════════════════ -->
+  <section id="tech">
+    <div class="container">
+      <div class="section-label"><span class="badge">🧬 Technology</span></div>
+      <h2 class="section-heading">Built on <span class="gradient-text">Best-in-Class AI</span></h2>
+      <p class="section-sub">A multi-layer architecture combining deep temporal modelling, mesoscopic analysis, and real-time streaming.</p>
+
+      <div class="arch-grid">
+        <div class="arch-card fade-up">
+          <div class="arch-icon">🧠</div>
+          <h3>CNN-BiLSTM</h3>
+          <p>Convolutional feature maps feed a Bidirectional LSTM to capture forward and backward temporal dependencies in audio signals.</p>
+        </div>
+        <div class="arch-card fade-up">
+          <div class="arch-icon">👁</div>
+          <h3>MesoNet</h3>
+          <p>Mesoscopic-scale analysis of image topology detects Inception-level and face-swap artefacts invisible to the human eye.</p>
+        </div>
+        <div class="arch-card fade-up">
+          <div class="arch-icon">🎵</div>
+          <h3>MFCC + Mel Features</h3>
+          <p>13-band MFCC and 128-band mel-spectrograms capture vocal timbre, prosody, and spectral inconsistencies from TTS/VC attacks.</p>
+        </div>
+        <div class="arch-card fade-up">
+          <div class="arch-icon">⚡</div>
+          <h3>Flask REST API</h3>
+          <p>Lightweight Python backend streams predictions over a RESTful API, enabling low-latency integration with any frontend.</p>
+        </div>
+        <div class="arch-card fade-up">
+          <div class="arch-icon">🔄</div>
+          <h3>Real-Time Pipeline</h3>
+          <p>Frame-level inference at &lt; 1 s latency using optimised TensorFlow Keras inference with batched preprocessing.</p>
+        </div>
+        <div class="arch-card fade-up">
+          <div class="arch-icon">📦</div>
+          <h3>Dataset — 7K+ Samples</h3>
+          <p>Trained on 3,500 real + 3,500 fake audio samples for a perfectly balanced, generalisable deepfake corpus.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave -->
+  <div class="wave" style="background:#f8f9ff;">
+    <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#ffffff" d="M0,40 C400,0 1040,70 1440,20 L1440,60 L0,60 Z"/>
+    </svg>
+  </div>
+
+  <!-- ══════════════════════ ACCURACY ══════════════════════ -->
+  <section id="accuracy">
+    <div class="container">
+      <div class="section-label"><span class="badge">📈 Performance</span></div>
+      <h2 class="section-heading">Numbers That <span class="gradient-text">Speak for Themselves</span></h2>
+      <p class="section-sub">Rigorous training, balanced datasets, and multi-modal inference give Pratyaksha AI industry-leading metrics.</p>
+
+      <div class="metrics-row">
+        <div class="metric-card fade-up">
+          <div class="metric-val">97%</div>
+          <div class="metric-lbl">Audio Accuracy</div>
+        </div>
+        <div class="metric-card fade-up">
+          <div class="metric-val">94%</div>
+          <div class="metric-lbl">Video Accuracy</div>
+        </div>
+        <div class="metric-card fade-up">
+          <div class="metric-val">&lt; 1s</div>
+          <div class="metric-lbl">Live Latency</div>
+        </div>
+        <div class="metric-card fade-up">
+          <div class="metric-val">7K+</div>
+          <div class="metric-lbl">Training Samples</div>
+        </div>
+      </div>
+
+      <!-- Pills -->
+      <div class="pill-row">
+        <div class="pill"><span class="emoji">🎯</span> Balanced 50/50 Dataset</div>
+        <div class="pill"><span class="emoji">📉</span> Low False Positive Rate</div>
+        <div class="pill"><span class="emoji">🌐</span> Generalisable to Diverse Mics</div>
+        <div class="pill"><span class="emoji">🔒</span> Local Inference — No Cloud Upload</div>
+        <div class="pill"><span class="emoji">🧪</span> Cross-validated on Holdout Set</div>
+      </div>
+
+      <!-- Timeline -->
+      <h3 style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:800;color:var(--navy);margin-bottom:28px;">Development Journey</h3>
+      <div class="timeline">
+        <div class="tl-item">
+          <h4>Phase 1 — Dataset Curation</h4>
+          <p>Assembled 7,000+ balanced real/fake audio samples from diverse speakers, microphones, and TTS engines to eliminate corpus bias.</p>
+        </div>
+        <div class="tl-item">
+          <h4>Phase 2 — Model Architecture</h4>
+          <p>Designed CNN-BiLSTM (audio) and integrated MesoNet (video/image) with custom preprocessing pipelines for each modality.</p>
+        </div>
+        <div class="tl-item">
+          <h4>Phase 3 — Integration &amp; API</h4>
+          <p>Built a Flask REST API connecting TensorFlow Keras models to the React-powered frontend with real-time webcam streaming.</p>
+        </div>
+        <div class="tl-item">
+          <h4>Phase 4 — Optimisation</h4>
+          <p>Fine-tuned thresholds, resolved live-session errors, and achieved sub-second latency on consumer-grade hardware.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ ABOUT ══════════════════════ -->
+  <section id="about" style="background:var(--off-white);">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-left fade-up">
+          <div class="badge" style="margin-bottom:20px;">🚀 About Pratyaksha AI</div>
+          <h2>Fighting Misinformation with <span class="gradient-text">AI Precision</span></h2>
+          <p>
+            "Pratyaksha" (प्रत्यक्ष) — Sanskrit for <em>direct perception</em> or <em>manifest truth</em>.
+            In an age where synthetic media blurs the line between real and fake, Pratyaksha AI
+            arms individuals, journalists, and organisations with the tools to see through deception.
+          </p>
+          <p>
+            Our platform is built entirely in-house — from data collection and model training
+            to frontend integration — making it a fully end-to-end deepfake detection solution.
+          </p>
+          <a href="#detect" class="btn-primary" style="margin-top:8px;width:fit-content;">Explore Platform →</a>
+        </div>
+        <div class="about-right">
+          <div class="feature-mini fade-up">
+            <div class="fi">🔐</div>
+            <h4>Privacy-First</h4>
+            <p>All inference runs locally. Your media never leaves your device.</p>
+          </div>
+          <div class="feature-mini fade-up">
+            <div class="fi">⚡</div>
+            <h4>Lightning Fast</h4>
+            <p>Sub-second predictions even on standard laptops without GPU.</p>
+          </div>
+          <div class="feature-mini fade-up">
+            <div class="fi">🌍</div>
+            <h4>Multi-Lingual Audio</h4>
+            <p>Our audio model handles diverse languages and accents effectively.</p>
+          </div>
+          <div class="feature-mini fade-up">
+            <div class="fi">📱</div>
+            <h4>Responsive UI</h4>
+            <p>Works seamlessly on desktop, tablet, and mobile browsers.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ CTA ══════════════════════ -->
+  <section id="cta">
+    <div class="container">
+      <h2>Ready to Verify the Truth?</h2>
+      <p>Upload a file or go live right now. No account needed — just pure detection power.</p>
+      <a href="#detect" class="btn-white">🔍 Start Free Detection</a>
+    </div>
+  </section>
+
+  <!-- ══════════════════════ FOOTER ══════════════════════ -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+
+        <div class="footer-brand">
+          <span class="logo-text">Pratyaksha AI</span>
+          <p>Real-time deepfake detection for audio, live video, static video, and images. Built to protect truth in the age of synthetic media.</p>
+        </div>
+
+        <div class="footer-col">
+          <h5>Detection</h5>
+          <ul>
+            <li><a href="#detect">Audio Analysis</a></li>
+            <li><a href="#detect">Live Video</a></li>
+            <li><a href="#detect">Static Video</a></li>
+            <li><a href="#detect">Image Scan</a></li>
+          </ul>
+        </div>
+
+        <div class="footer-col">
+          <h5>Platform</h5>
+          <ul>
+            <li><a href="#how">How It Works</a></li>
+            <li><a href="#tech">Technology</a></li>
+            <li><a href="#accuracy">Accuracy</a></li>
+            <li><a href="#about">About</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <div class="footer-bottom">
+        <div class="footer-tagline">प्रत्यक्षम् किम् प्रमाणम् — Truth needs no proof.</div>
+        <div class="team-line">Built with ❤️ by <strong>Team Win Diesel</strong></div>
+        <div class="copy">© 2025 Pratyaksha AI · All rights reserved · VNR Hackathon</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ══════════════════════ SCRIPT ══════════════════════ -->
+  <script>
+    // ── Nav scroll shadow ──
+    const nav = document.getElementById('nav');
+    window.addEventListener('scroll', () => {
+      nav.classList.toggle('scrolled', window.scrollY > 20);
+    });
+
+    // ── Intersection Observer for fade-up ──
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+
+    document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>
